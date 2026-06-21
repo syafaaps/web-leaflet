@@ -48,6 +48,8 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
   const [hoveredKab,   setHoveredKab]   = useState(null);
   const [selectedKab,  setSelectedKab]  = useState(null);
   const [rankOpen,     setRankOpen]     = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
 
   // Pakai komoditas pertama yang dipilih
   const activeKom = selectedKoms?.[0] ?? '';
@@ -65,12 +67,57 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
   }, [activeKom, selectedDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  const getAiAnalysis = async (props) => {
+  try {
+    setLoadingAI(true);
+
+    setAiAnalysis(''); 
+    console.log("=== DATA KE AI ===");
+    console.log("Kabupaten:", props.kabupaten);
+    console.log("Harga kabupaten:", props.rata_kabupaten);
+    console.log("Rata provinsi:", rataProvinsi);
+
+    const response = await fetch("/api/analisis-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        kabupaten: props.kabupaten,
+        komoditas: props.komoditas_nama,
+        harga: props.rata_kabupaten,
+        rataProvinsi: rataProvinsi
+      }),
+    });
+
+    const result = await response.json();
+
+    console.log(
+      "RESULT DARI API:",
+      JSON.stringify(result, null, 2)
+    );
+    setAiAnalysis(
+    result.analisis ||
+    result.output ||
+    "Tidak ada analisis"
+  );
+
+  } catch (err) {
+    console.error(err);
+    setAiAnalysis("Gagal mengambil analisis");
+  } finally {
+    setLoadingAI(false);
+  }
+};
 
   const { min, max } = geojsonData?.features
     ? computeRange(geojsonData.features)
     : { min: 0, max: 1 };
 
   const ranking = geojsonData?.features ? getRanking(geojsonData.features) : [];
+  const rataProvinsi =
+  geojsonData?.rata_provinsi || 0;
+  console.log("Rata provinsi dari API =", geojsonData?.rata_provinsi);
   const activeInfo = selectedKab || hoveredKab;
 
   return (
@@ -80,9 +127,11 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
       <LeafletHeatmapMap
         geojsonData={geojsonData}
         onHover={setHoveredKab}
-        onClick={props => setSelectedKab(prev =>
-          prev?.kabupaten === props.kabupaten ? null : props
-        )}
+        onClick={props => {
+        setSelectedKab(props);
+        getAiAnalysis(props);
+      }}
+        
       />
 
       {/* Loading overlay */}
@@ -142,9 +191,48 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
               <div style={{ fontSize: '11px', color: 'var(--c-muted)', marginBottom: '8px' }}>
                 {activeInfo.komoditas_nama} · {activeInfo.tanggal}
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-ink)', letterSpacing: '-0.5px' }}>
-                {formatRp(activeInfo.rata_kabupaten)}
-              </div>
+              <div
+            style={{
+              fontSize: '22px',
+              fontWeight: 800,
+              color: 'var(--c-ink)',
+              letterSpacing: '-0.5px'
+            }}
+          >
+            {formatRp(activeInfo.rata_kabupaten)}
+          </div>
+
+         {loadingAI ? (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '10px',
+            background: '#eff6ff',
+            borderRadius: '8px',
+            fontSize: '12px',
+            border: '1px solid #bfdbfe'
+          }}
+        >
+          🤖 AI sedang menganalisis...
+        </div>
+      ) : aiAnalysis ? (
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '10px',
+            background: '#f8fafc',
+            borderRadius: '8px',
+            fontSize: '12px',
+            lineHeight: '1.5',
+            border: '1px solid #e2e8f0'
+          }}
+        >
+          <strong>🤖 Analisis AI</strong>
+          <div style={{ marginTop: '6px' }}>
+            {aiAnalysis}
+          </div>
+        </div>
+      ) : null}
             </>
           ) : (
             <div style={{ fontSize: '12px', color: 'var(--c-muted)', fontStyle: 'italic' }}>
@@ -196,7 +284,10 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
               return (
                 <div
                   key={f.properties.uid || i}
-                  onClick={() => setSelectedKab(isActive ? null : f.properties)}
+                  onClick={() => {
+                    setSelectedKab(f.properties);
+                    getAiAnalysis(f.properties);
+                  }}
                   style={{
                     padding: '6px 14px', cursor: 'pointer',
                     background: isActive ? 'var(--c-mint)' : 'transparent',

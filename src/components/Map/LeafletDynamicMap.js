@@ -8,13 +8,30 @@ import styles from './Map.module.scss';
 
 // ── Konfigurasi warna per kategori ──────────────────────────────────────────
 const KATEGORI_CONFIG = {
-  Mahal:  { fill: '#ef4444', stroke: '#b91c1c', glow: 'rgba(239,68,68,0.4)',  emoji: '🔴' },
-  Sedang: { fill: '#f97316', stroke: '#c2410c', glow: 'rgba(249,115,22,0.4)', emoji: '🟠' },
-  Murah:  { fill: '#22c55e', stroke: '#15803d', glow: 'rgba(34,197,94,0.4)',  emoji: '🟢' },
+  'Di Atas Rata-rata': {
+    fill: '#ef4444',
+    stroke: '#b91c1c',
+    glow: 'rgba(239,68,68,0.4)',
+    emoji: '🔴'
+  },
+
+  'Rata-rata': {
+    fill: '#f97316',
+    stroke: '#c2410c',
+    glow: 'rgba(249,115,22,0.4)',
+    emoji: '🟠'
+  },
+
+  'Di Bawah Rata-rata': {
+    fill: '#22c55e',
+    stroke: '#15803d',
+    glow: 'rgba(34,197,94,0.4)',
+    emoji: '🟢'
+  },
 };
 
 function getConfig(kategori) {
-  return KATEGORI_CONFIG[kategori] ?? KATEGORI_CONFIG['Sedang'];
+  return KATEGORI_CONFIG[kategori] ?? KATEGORI_CONFIG['Rata-rata'];
 }
 
 // ── SVG teardrop pin — runcing bawah, dot putih di tengah ───────────────────
@@ -53,7 +70,15 @@ function buildPopupHTML(item) {
   const rata     = item.rata_prov? `Rp ${Number(item.rata_prov).toLocaleString('id-ID')}` : '-';
   const pct      = Number(item.persen_deviasi ?? 0);
   const pctStr   = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
-  const pctColor = pct > 0 ? '#ef4444' : '#22c55e';
+  let pctColor = '#f97316';
+
+if (item.kategori === 'Di Atas Rata-rata') {
+  pctColor = '#ef4444';
+}
+
+if (item.kategori === 'Di Bawah Rata-rata') {
+  pctColor = '#22c55e';
+}
   const tgl      = item.tanggal
     ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     : '-';
@@ -160,267 +185,4 @@ const LeafletMapDynamic = ({ className, pasarData = [] }) => {
 };
 
 export default LeafletMapDynamic;
-// import { useEffect } from 'react';
-// import L from 'leaflet';
-// import * as ReactLeaflet from 'react-leaflet';
-// import 'leaflet/dist/leaflet.css';
-// import 'leaflet.heat';
 
-// import styles from './Map.module.scss';
-
-// const { MapContainer, TileLayer, Marker, Popup, useMap } = ReactLeaflet;
-
-// // ── Fix ikon default Leaflet (wajib di Next.js) ──────────────────────────────
-// function FixLeafletIcons() {
-//   useEffect(() => {
-//     delete L.Icon.Default.prototype._getIconUrl;
-//     L.Icon.Default.mergeOptions({
-//       iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
-//       iconUrl: '/leaflet/images/marker-icon.png',
-//       shadowUrl: '/leaflet/images/marker-shadow.png',
-//     });
-//   }, []);
-//   return null;
-// }
-
-// // ── Heatmap layer (data statis, bisa diganti dinamis nanti) ──────────────────
-// function HeatmapLayer() {
-//   const map = useMap();
-
-//   useEffect(() => {
-//     if (!map) return;
-
-//     const heatData = [
-//       [-7.2575, 112.7521, 1.0],
-//       [-7.9666, 112.6326, 0.8],
-//       [-7.6298, 111.5239, 0.6],
-//       [-7.1500, 112.6500, 0.7],
-//       [-8.0650, 112.1660, 0.9],
-//     ];
-
-//     const heat = L.heatLayer(heatData, {
-//       radius: 40,
-//       blur: 25,
-//       gradient: {
-//         0.2: 'green',
-//         0.5: 'yellow',
-//         0.8: 'orange',
-//         1: 'red',
-//       },
-//     });
-
-//     heat.addTo(map);
-
-//     return () => {
-//       map.removeLayer(heat);
-//     };
-//   }, [map]);
-
-//   return null;
-// }
-
-// // ── Komponen utama ────────────────────────────────────────────────────────────
-// const LeafletMapDynamic = ({ className, pasarData = [] }) => {
-//   let mapClassName = styles.map;
-//   if (className) mapClassName = `${mapClassName} ${className}`;
-
-//   return (
-//     <MapContainer
-//       className={mapClassName}
-//       center={[-7.5, 112.5]}
-//       zoom={8}
-//       style={{ height: '100%', width: '100%' }}
-//     >
-//       {/* Fix ikon, harus di dalam MapContainer */}
-//       <FixLeafletIcons />
-
-//       <TileLayer
-//         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-//         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-//       />
-
-//       <HeatmapLayer />
-
-//       {/* ── Marker pasar dari API ── */}
-//       {pasarData.map((item, index) => {
-//         const lat = Number(item.latitude);
-//         const lng = Number(item.longitude);
-
-//         // Skip kalau koordinat tidak valid
-//         if (isNaN(lat) || isNaN(lng)) return null;
-
-//         return (
-//           <Marker key={item.id ?? index} position={[lat, lng]}>
-//             <Popup>
-//               <div style={{
-//                 fontFamily: 'DM Sans, sans-serif',
-//                 fontSize: '13px',
-//                 lineHeight: '1.5',
-//                 minWidth: '160px'
-//               }}>
-//                 <div style={{
-//                   fontWeight: 700,
-//                   fontSize: '14px',
-//                   color: '#0f4c35',
-//                   marginBottom: '4px',
-//                   borderBottom: '1px solid #e2e8e4',
-//                   paddingBottom: '4px'
-//                 }}>
-//                   🏪 {item.nama_pasar}
-//                 </div>
-
-//                 {item.kabupaten && (
-//                   <div style={{ color: '#4a6358', marginBottom: '2px' }}>
-//                     📍 {item.kabupaten}
-//                   </div>
-//                 )}
-
-//                 {item.kategori_harga && (
-//                   <div style={{ marginTop: '6px' }}>
-//                     <span style={{
-//                       display: 'inline-block',
-//                       padding: '2px 8px',
-//                       borderRadius: '20px',
-//                       fontSize: '11px',
-//                       fontWeight: 600,
-//                       background:
-//                         item.kategori_harga === 'Murah' ? '#d4edda' :
-//                         item.kategori_harga === 'Sedang' ? '#fef3c7' : '#fee2e2',
-//                       color:
-//                         item.kategori_harga === 'Murah' ? '#16a34a' :
-//                         item.kategori_harga === 'Sedang' ? '#d97706' : '#ef4444',
-//                     }}>
-//                       {item.kategori_harga}
-//                     </span>
-//                   </div>
-//                 )}
-
-//                 {item.harga && (
-//                   <div style={{ marginTop: '4px', fontWeight: 600, color: '#0f2318' }}>
-//                     Rp {Number(item.harga).toLocaleString('id-ID')}
-//                   </div>
-//                 )}
-//               </div>
-//             </Popup>
-//           </Marker>
-//         );
-//       })}
-
-//     </MapContainer>
-//   );
-// };
-
-// export default LeafletMapDynamic;
-// import { useEffect } from 'react';
-// import L from 'leaflet';
-// import * as ReactLeaflet from 'react-leaflet';
-// import 'leaflet/dist/leaflet.css';
-// import 'leaflet.heat';
-
-// import styles from './Map.module.scss';
-
-// const { MapContainer, TileLayer, useMap } = ReactLeaflet;
-
-// function HeatmapLayer() {
-//   const map = useMap();
-
-//   useEffect(() => {
-//     if (!map) return;
-
-//     const heatData = [
-//       [-7.2575, 112.7521, 1.0],
-//       [-7.9666, 112.6326, 0.8],
-//       [-7.6298, 111.5239, 0.6],
-//       [-7.1500, 112.6500, 0.7],
-//       [-8.0650, 112.1660, 0.9],
-//     ];
-
-//     const heat = L.heatLayer(heatData, {
-//       radius: 40,
-//       blur: 25,
-//       gradient: {
-//         0.2: 'green',
-//         0.5: 'yellow',
-//         0.8: 'orange',
-//         1: 'red',
-//       },
-//     });
-
-//     heat.addTo(map);
-
-//     return () => {
-//       map.removeLayer(heat);
-//     };
-//   }, [map]);
-
-//   return null;
-// }
-
-// const LeafletMapDynamic = ({ className }) => {
-//   let mapClassName = styles.map;
-
-//   if (className) {
-//     mapClassName = `${mapClassName} ${className}`;
-//   }
-
-//   useEffect(() => {
-//     delete L.Icon.Default.prototype._getIconUrl;
-//     L.Icon.Default.mergeOptions({
-//       iconRetinaUrl: 'leaflet/images/marker-icon-2x.png',
-//       iconUrl: 'leaflet/images/marker-icon.png',
-//       shadowUrl: 'leaflet/images/marker-shadow.png',
-//     });
-//   }, []);
-
-//   return (
-//     <MapContainer
-//       className={mapClassName}
-//       center={[-7.5, 112.5]}
-//       zoom={8}
-//       style={{ height: '100%', width: '100%' }}
-//     >
-//       <TileLayer
-//         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-//       />
-
-//       <HeatmapLayer />
-//     </MapContainer>
-//   );
-// };
-
-// export default LeafletMapDynamic;
-// import { useEffect } from 'react';
-// import Leaflet from 'leaflet';
-// import * as ReactLeaflet from 'react-leaflet';
-// import 'leaflet/dist/leaflet.css';
-
-// import styles from './Map.module.scss';
-
-// const { MapContainer } = ReactLeaflet;
-
-// const Map = ({ children, className, width, height, ...rest }) => {
-//   let mapClassName = styles.map;
-
-//   if ( className ) {
-//     mapClassName = `${mapClassName} ${className}`;
-//   }
-
-//   useEffect(() => {
-//     (async function init() {
-//       delete Leaflet.Icon.Default.prototype._getIconUrl;
-//       Leaflet.Icon.Default.mergeOptions({
-//         iconRetinaUrl: 'leaflet/images/marker-icon-2x.png',
-//         iconUrl: 'leaflet/images/marker-icon.png',
-//         shadowUrl: 'leaflet/images/marker-shadow.png',
-//       });
-//     })();
-//   }, []);
-
-//   return (
-//     <MapContainer className={mapClassName} {...rest}>
-//       {children(ReactLeaflet, Leaflet)}
-//     </MapContainer>
-//   )
-// }
-
-// export default Map;

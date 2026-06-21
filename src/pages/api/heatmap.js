@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   );
 
   const { komoditas, tanggal } = req.query;
+  console.log('QUERY PARAMS:', req.query);
 
   try {
     const conditions = [];
@@ -49,6 +50,25 @@ export default async function handler(req, res) {
     `,
       params
     );
+    let rataProvinsi = 0;
+
+    if (komoditas) {
+      const tanggalCari = tanggal
+        ? tanggal
+        : result.rows[0]?.tanggal;
+
+      const avgResult = await pool.query(
+        `
+        SELECT harga
+        FROM "komoditas_rata-rata"
+        WHERE tanggal = $1
+          AND komoditas_nama = $2
+        `,
+        [tanggalCari, komoditas]
+      );
+
+      rataProvinsi = avgResult.rows[0]?.harga || 0;
+    }
 
     const features = result.rows
       .filter((row) => row.geojson)
@@ -65,9 +85,10 @@ export default async function handler(req, res) {
       }));
 
     res.status(200).json({
-      type: 'FeatureCollection',
-      features,
-    });
+    type: 'FeatureCollection',
+    features,
+    rata_provinsi: rataProvinsi,
+  });
   } catch (error) {
     console.error(error);
 
