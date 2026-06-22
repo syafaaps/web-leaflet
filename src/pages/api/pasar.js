@@ -49,14 +49,14 @@ SELECT
     r.harga AS rata_prov,
     k.harga - r.harga AS deviasi,
     ROUND(
-      (k.harga-r.harga)::numeric*100/
+      (k.harga-r.harga)::numeric * 100 /
       NULLIF(r.harga,0),
       2
     ) AS persen_deviasi,
     CASE
-      WHEN (k.harga-r.harga)::numeric/NULLIF(r.harga,0) > 0.05
+      WHEN (k.harga-r.harga)::numeric / NULLIF(r.harga,0) > 0.05
         THEN 'Di Atas Rata-rata'
-      WHEN (k.harga-r.harga)::numeric/NULLIF(r.harga,0) < -0.05
+      WHEN (k.harga-r.harga)::numeric / NULLIF(r.harga,0) < -0.05
         THEN 'Di Bawah Rata-rata'
       ELSE 'Rata-rata'
     END AS kategori
@@ -65,13 +65,18 @@ JOIN pasar p
     ON k.pasar_id = p.id
 JOIN kab_kota kk
     ON p.kabkota_id = kk.id
+JOIN provinsi pr
+    ON kk.provinsi_id = pr.id_provinsi
 JOIN "komoditas_rata-rata" r
     ON k.tanggal = r.tanggal
    AND k.komoditas_nama = r.komoditas_nama
 WHERE
     k.komoditas_nama = $1
     AND k.tanggal = $2
-ORDER BY kk.kab_nama,p.psr_nama
+    AND pr.nama = 'Jawa Timur'
+ORDER BY
+    kk.kab_nama,
+    p.psr_nama
 `,
 [komoditas, tanggal]
 );

@@ -67,46 +67,56 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
   }, [activeKom, selectedDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  const getAiAnalysis = async (props) => {
+  useEffect(() => {
+
+  if (!activeKom) return;
+
+  getAiAnalysis();
+
+  }, [activeKom, selectedDate]);
+const getAiAnalysis = async () => {
+
   try {
+
     setLoadingAI(true);
 
-    setAiAnalysis(''); 
-    console.log("=== DATA KE AI ===");
-    console.log("Kabupaten:", props.kabupaten);
-    console.log("Harga kabupaten:", props.rata_kabupaten);
-    console.log("Rata provinsi:", rataProvinsi);
+    setAiAnalysis('');
 
-    const response = await fetch("/api/analisis-ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        kabupaten: props.kabupaten,
-        komoditas: props.komoditas_nama,
-        harga: props.rata_kabupaten,
-        rataProvinsi: rataProvinsi
-      }),
-    });
+    const response = await fetch(
+      '/api/analisis-ai-provinsi',
+      {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json'
+        },
+
+        body: JSON.stringify({
+          komoditas: activeKom,
+          tanggal: selectedDate
+        })
+      }
+    );
 
     const result = await response.json();
 
     console.log(
       "RESULT DARI API:",
-      JSON.stringify(result, null, 2)
+      JSON.stringify(result,null,2)
     );
-    setAiAnalysis(
-    result.analisis ||
-    result.output ||
-    "Tidak ada analisis"
-  );
 
-  } catch (err) {
+    setAiAnalysis(
+      result.analisis ||
+      "Tidak ada analisis"
+    );
+
+  } catch(err){
+
     console.error(err);
-    setAiAnalysis("Gagal mengambil analisis");
+
   } finally {
+
     setLoadingAI(false);
+
   }
 };
 
@@ -129,7 +139,6 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
         onHover={setHoveredKab}
         onClick={props => {
         setSelectedKab(props);
-        getAiAnalysis(props);
       }}
         
       />
@@ -201,38 +210,6 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
           >
             {formatRp(activeInfo.rata_kabupaten)}
           </div>
-
-         {loadingAI ? (
-        <div
-          style={{
-            marginTop: '12px',
-            padding: '10px',
-            background: '#eff6ff',
-            borderRadius: '8px',
-            fontSize: '12px',
-            border: '1px solid #bfdbfe'
-          }}
-        >
-          🤖 AI sedang menganalisis...
-        </div>
-      ) : aiAnalysis ? (
-        <div
-          style={{
-            marginTop: '12px',
-            padding: '10px',
-            background: '#f8fafc',
-            borderRadius: '8px',
-            fontSize: '12px',
-            lineHeight: '1.5',
-            border: '1px solid #e2e8f0'
-          }}
-        >
-          <strong>🤖 Analisis AI</strong>
-          <div style={{ marginTop: '6px' }}>
-            {aiAnalysis}
-          </div>
-        </div>
-      ) : null}
             </>
           ) : (
             <div style={{ fontSize: '12px', color: 'var(--c-muted)', fontStyle: 'italic' }}>
@@ -315,7 +292,71 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
           </div>
         )}
       </div>
+            {/* Panel AI Provinsi */}
+            <div
+              style={{
+                position:'absolute',
+                bottom:14,
+                right:14,
+                zIndex:800,
+                width:'260px',
+                background:'rgba(255,255,255,.97)',
+                backdropFilter:'blur(12px)',
+                borderRadius:'var(--radius-lg)',
+                border:'1px solid var(--c-border)',
+                boxShadow:'var(--shadow-md)',
+                padding:'12px 14px'
+              }}
+            >
 
+              <div
+                style={{
+                  fontSize:'10px',
+                  fontWeight:700,
+                  letterSpacing:'.07em',
+                  textTransform:'uppercase',
+                  color:'var(--c-muted)',
+                  marginBottom:'6px'
+                }}
+              >
+                🤖 AI Jawa Timur
+              </div>
+
+              <div
+                style={{
+                  fontSize:'11px',
+                  color:'var(--c-muted)',
+                  marginBottom:'8px'
+                }}
+              >
+                {activeKom} · {selectedDate || 'Tanggal terbaru'}
+              </div>
+
+              {loadingAI ? (
+
+                <div
+                  style={{
+                    fontSize:'12px'
+                  }}
+                >
+                  AI sedang menganalisis...
+                </div>
+
+              ) : (
+
+                <div
+                  style={{
+                    fontSize:'12px',
+                    lineHeight:'1.7',
+                    color:'#334155'
+                  }}
+                >
+                  {aiAnalysis}
+                </div>
+
+              )}
+
+            </div>
     </div>
   );
 }

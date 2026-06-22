@@ -118,7 +118,10 @@ if (item.kategori === 'Di Bawah Rata-rata') {
 }
 
 // ── Layer marker, diperbarui setiap pasarData berubah ───────────────────────
-function PasarMarkerLayer({ pasarData }) {
+  function PasarMarkerLayer({
+    pasarData,
+    onMarkerClick
+  })  {
   const map = useMap();
   const layerRef = useRef(null);
 
@@ -136,20 +139,33 @@ function PasarMarkerLayer({ pasarData }) {
       const lng = Number(item.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      L.marker([lat, lng], { icon: createPinIcon(item.kategori) })
-        .bindPopup(buildPopupHTML(item), {
-          maxWidth: 270,
-          className: 'pasar-popup',
-        })
-        .addTo(layerRef.current);
+      L.marker([lat, lng], {
+      icon: createPinIcon(item.kategori)
+    })
+    .on('click', () => {
+
+      if (onMarkerClick) {
+        onMarkerClick(item);
+      }
+
+    })
+    .bindPopup(buildPopupHTML(item), {
+      maxWidth: 270,
+      className: 'pasar-popup',
+    })
+    .addTo(layerRef.current);
     });
-  }, [pasarData, map]);
+  }, [pasarData, map, onMarkerClick]);
 
   return null;
 }
 
 // ── Komponen utama ───────────────────────────────────────────────────────────
-const LeafletMapDynamic = ({ className, pasarData = [] }) => {
+  const LeafletMapDynamic = ({
+    className,
+    pasarData = [],
+    onMarkerClick
+  }) => {
   const mapClassName = [styles.map, className].filter(Boolean).join(' ');
 
   return (
@@ -178,7 +194,10 @@ const LeafletMapDynamic = ({ className, pasarData = [] }) => {
           attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         />
 
-        <PasarMarkerLayer pasarData={pasarData} />
+        <PasarMarkerLayer
+        pasarData={pasarData}
+        onMarkerClick={onMarkerClick}
+      />
       </MapContainer>
     </>
   );

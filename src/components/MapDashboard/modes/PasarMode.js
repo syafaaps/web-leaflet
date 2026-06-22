@@ -29,6 +29,10 @@ function MapLoading() {
 export default function PasarMode({ selectedDate, selectedKoms, selectedKabupaten }) {
   const [pasarData, setPasarData] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  const [selectedPasar, setSelectedPasar] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const [stats, setStats] = useState({
     total: 0,
@@ -91,11 +95,60 @@ export default function PasarMode({ selectedDate, selectedKoms, selectedKabupate
     fetchData();
   }, [fetchData]);
 
+  const getAiAnalysis = async (props) => {
+  try {
+    setLoadingAI(true);
+    setAiAnalysis('');
+
+    const response = await fetch(
+      '/api/analisis-ai-pasar',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: JSON.stringify({
+          namaPasar: props.nama_pasar,
+          kabupaten: props.kabupaten,
+          komoditas: props.komoditas_nama,
+          harga: props.harga,
+          tanggal: props.tanggal,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    console.log('HASIL AI =', result);
+
+    setAiAnalysis(
+      result[0]?.output ||
+      result.output ||
+      result.analisis ||
+      "Tidak ada analisis"
+    );
+    console.log(
+  "AI ANALYSIS SET =",
+  result[0]?.output ||
+  result.output ||
+  result.analisis
+);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoadingAI(false);
+  }
+};
+
   const filteredPasarData = selectedKabupaten
   ? pasarData.filter(
       item => item.kabupaten === selectedKabupaten
     )
   : pasarData;
+
+console.log("AI STATE =", aiAnalysis);
 
   return (
     <div
@@ -105,9 +158,13 @@ export default function PasarMode({ selectedDate, selectedKoms, selectedKabupate
         position: 'relative',
       }}
     >
-      <LeafletPasarMap pasarData={filteredPasarData} /> 
-      
-
+      <LeafletPasarMap
+        pasarData={filteredPasarData}
+        onMarkerClick={(props) => {
+          setSelectedPasar(props);
+          getAiAnalysis(props);
+        }}
+      />
       {loading && (
         <div
           style={{
@@ -209,6 +266,131 @@ export default function PasarMode({ selectedDate, selectedKoms, selectedKabupate
           </div>
         ))}
       </div>
+      {/* Panel AI */}
+      {selectedPasar && (
+        <div
+          style={{
+            position:'absolute',
+            bottom:14,
+            left:14,
+            zIndex:800,
+            width:'260px',
+            padding:'12px 14px',
+            background:'rgba(255,255,255,.97)',
+            backdropFilter:'blur(12px)',
+            borderRadius:'var(--radius-lg)',
+            border:'1px solid var(--c-border)',
+            boxShadow:'var(--shadow-md)',
+          }}
+        >
+
+          {/* Header */}
+          <div
+            style={{
+              padding: '12px 14px',
+              background: 'linear-gradient(135deg,var(--c-mint),white)',
+              borderBottom: '1px solid var(--c-border)',
+            }}
+          >
+
+            <div
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '.07em',
+                textTransform: 'uppercase',
+                color: 'var(--c-muted)',
+                marginBottom: '5px',
+              }}
+            >
+              📍 Dipilih
+            </div>
+
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: 'var(--c-forest)',
+                lineHeight: 1.2,
+              }}
+            >
+              {selectedPasar.nama_pasar}
+            </div>
+
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--c-muted)',
+                marginTop: '3px',
+                marginBottom: '8px',
+              }}
+            >
+              {selectedPasar.komoditas_nama} · {selectedPasar.tanggal}
+            </div>
+
+            <div
+              style={{
+                fontSize: '22px',
+                fontWeight: 800,
+                color: 'var(--c-ink)',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              Rp {Number(selectedPasar.harga).toLocaleString('id-ID')}
+            </div>
+
+          </div>
+
+          {/* Body */}
+          {loadingAI ? (
+
+          <div
+            style={{
+              marginTop:'12px',
+              padding:'10px',
+              background:'#eff6ff',
+              borderRadius:'8px',
+              fontSize:'12px',
+              border:'1px solid #bfdbfe'
+            }}
+          >
+            🤖 AI sedang menganalisis...
+          </div>
+
+        ) : aiAnalysis ? (
+
+          <div
+            style={{
+              marginTop:'12px',
+              padding:'10px',
+              background:'#f8fafc',
+              borderRadius:'8px',
+              border:'1px solid #e2e8f0'
+            }}
+          >
+
+            <strong>🤖 Analisis AI</strong>
+
+            <div
+              style={{
+                marginTop:'8px',
+                fontSize:'12px',
+                lineHeight:'1.7',
+                color:'#334155'
+              }}
+            >
+
+              {String(aiAnalysis)}
+
+            </div>
+
+          </div>
+
+        ) : null}
+
+        </div>
+      )}
 
       {/* Legend */}
       <div

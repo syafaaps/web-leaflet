@@ -45,18 +45,27 @@ export default function DashboardShell() {
 
   // Fetch semua komoditas tersedia (dari heatmap, sudah include semua)
   useEffect(() => {
-    fetch('/api/heatmap')
-      .then(r => r.json())
-      .then(data => {
-        const list = [
-          ...new Set((data.features || []).map(f => f.properties.komoditas_nama))
-        ].filter(Boolean).sort();
-        setKomoditasList(list);
-        // Default: pilih komoditas pertama
-        if (list.length) setSelectedKom(list[0]);
-      })
-      .catch(console.error);
-  }, []);
+
+  fetch('/api/komoditas')
+    .then(r => r.json())
+    .then(data => {
+
+      const list =
+        data
+        .map(item => item.komoditas_nama)
+        .filter(Boolean)
+        .sort();
+
+      setKomoditasList(list);
+
+      if (list.length) {
+        setSelectedKom(list[0]);
+      }
+
+    })
+    .catch(console.error);
+
+}, []);
 
  useEffect(() => {
   fetch('/api/kabupaten')
