@@ -74,6 +74,8 @@ WHERE
     k.komoditas_nama = $1
     AND k.tanggal = $2
     AND pr.nama = 'Jawa Timur'
+    AND k.harga IS NOT NULL
+    AND k.harga > 0
 ORDER BY
     kk.kab_nama,
     p.psr_nama
