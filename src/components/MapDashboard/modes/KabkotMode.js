@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import ReactMarkdown from "react-markdown";
 
 const LeafletHeatmapMap = dynamic(
   () => import('../../Map/LeafletHeatmapMap'),
@@ -395,14 +396,35 @@ const getAiAnalysis = async () => {
               ) : (
 
                 <div
-                  style={{
-                    fontSize:'12px',
-                    lineHeight:'1.7',
-                    color:'#334155'
-                  }}
-                >
-                  {aiAnalysis}
-                </div>
+            style={{
+              fontSize:'12px',
+              lineHeight:'1.7',
+              color:'#334155'
+            }}
+          >
+            <ReactMarkdown
+              components={{
+                strong: ({ children }) => (
+                  <strong
+                    style={{
+                      fontWeight: 700,
+                      color: "#111827"
+                    }}
+                  >
+                    {children}
+                  </strong>
+                ),
+
+                p: ({ children }) => (
+                  <p style={{ marginBottom: "10px" }}>
+                    {children}
+                  </p>
+                )
+              }}
+            >
+              {aiAnalysis}
+            </ReactMarkdown>
+          </div>
 
               )}
 
