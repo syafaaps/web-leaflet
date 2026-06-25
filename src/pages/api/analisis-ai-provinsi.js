@@ -34,6 +34,28 @@ export default async function handler(req, res) {
       rataProvinsi
     );
 
+    const avgKabkotResult = await pool.query(
+    `
+    SELECT
+        kabupaten,
+        rata_kabupaten
+    FROM v_avg_kabkot
+    WHERE
+        komoditas_nama = $1
+        AND tanggal = $2
+    ORDER BY kabupaten
+    `,
+    [
+      komoditas,
+      tanggal
+    ]
+    );
+
+    console.log(
+      "AVG KABKOT =",
+      avgKabkotResult.rows.length
+    );
+
     const mahalResult = await pool.query(
     `
     SELECT
@@ -193,6 +215,9 @@ const response = await fetch(
       tanggal,
 
       rataProvinsi,
+
+        avgKabkot:
+    avgKabkotResult.rows,
 
       topMahal: mahalResult.rows,
 
