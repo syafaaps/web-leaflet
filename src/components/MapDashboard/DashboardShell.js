@@ -400,7 +400,7 @@ export default function DashboardShell() {
 
           {/* ── Badge aktif (kiri atas peta) ── */}
           <div style={{
-            position: 'absolute', top: 14, left: 14, zIndex: 900,
+            position: 'absolute', top: 14, left: 55, zIndex: 900,
             display: 'flex', alignItems: 'center', gap: '8px',
             background: 'rgba(255,255,255,.95)', backdropFilter: 'blur(8px)',
             padding: '6px 12px', borderRadius: '20px',
