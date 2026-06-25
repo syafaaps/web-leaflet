@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 /** @type {import('next').NextConfig} */
@@ -17,6 +17,14 @@ const nextConfig = {
       }),
     )
     return config
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://labai.polinema.ac.id:9800/api/:path*'
+      }
+    ]
   }
 }
 

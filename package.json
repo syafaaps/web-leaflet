@@ -18,12 +18,14 @@
     "url": "https://github.com/colbyfayock/next-leaflet-starter/issues"
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
     "copy-webpack-plugin": "^11.0.0",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "next": "^14.0.1",
     "pg": "^8.20.0",
     "react": "^18.2.0",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.2.0",
     "react-icons": "^4.11.0",
     "react-leaflet": "^4.2.1",
