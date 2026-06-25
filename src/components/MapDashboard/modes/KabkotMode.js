@@ -201,15 +201,65 @@ const getAiAnalysis = async () => {
                 {activeInfo.komoditas_nama} · {activeInfo.tanggal}
               </div>
               <div
-            style={{
-              fontSize: '22px',
-              fontWeight: 800,
-              color: 'var(--c-ink)',
-              letterSpacing: '-0.5px'
-            }}
-          >
-            {formatRp(activeInfo.rata_kabupaten)}
-          </div>
+                style={{
+                  marginTop: '6px'
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    color: 'var(--c-muted)',
+                    fontWeight: 700,
+                    letterSpacing: '.07em'
+                  }}
+                >
+                  Harga Wilayah
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: 'var(--c-ink)',
+                    letterSpacing: '-0.5px',
+                    marginTop: '2px'
+                  }}
+                >
+                  {formatRp(activeInfo.rata_kabupaten)}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '10px',
+                  paddingTop: '10px',
+                  borderTop: '1px dashed var(--c-border)'
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    color: 'var(--c-muted)',
+                    fontWeight: 700,
+                    letterSpacing: '.07em'
+                  }}
+                >
+                  Rata-rata Provinsi
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: 'var(--c-forest)',
+                    marginTop: '2px'
+                  }}
+                >
+                  {formatRp(rataProvinsi)}
+                </div>
+              </div>
             </>
           ) : (
             <div style={{ fontSize: '12px', color: 'var(--c-muted)', fontStyle: 'italic' }}>
