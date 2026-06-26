@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import ReactMarkdown from "react-markdown";
 
 const LeafletPasarMap = dynamic(
   () => import('../../Map/LeafletDynamicMap'),
@@ -49,36 +50,40 @@ export default function PasarMode({ selectedDate, selectedKoms, selectedKabupate
 
     setLoading(true);
 
-    Promise.all(
-      selectedKoms.map((kom) => {
-        const p = new URLSearchParams({
-          komoditas: kom,
-        });
+    const kom = selectedKoms[0];
 
-        if (selectedDate) {
-          p.set('tanggal', selectedDate);
-        }
+    const p = new URLSearchParams({
+      komoditas: kom,
+    });
 
-        return fetch(`/api/pasar?${p}`).then((r) => r.json());
-      })
-    )
-      .then((results) => {
-        const merged = results.flat();
+    if (selectedDate) {
+      p.set('tanggal', selectedDate);
+    }
 
-        setPasarData(merged);
+    fetch(`/api/pasar?${p}`)
+      .then((r) => r.json())
+      .then((data) => {
+
+        const filtered = data.filter(
+          item =>
+            item.harga !== null &&
+            Number(item.harga) > 0
+        );
+
+        setPasarData(filtered);
 
         setStats({
-          total: merged.length,
+          total: filtered.length,
 
-          atas: merged.filter(
+          atas: filtered.filter(
             d => d.kategori === 'Di Atas Rata-rata'
           ).length,
 
-          rata: merged.filter(
+          rata: filtered.filter(
             d => d.kategori === 'Rata-rata'
           ).length,
 
-          bawah: merged.filter(
+          bawah: filtered.filter(
             d => d.kategori === 'Di Bawah Rata-rata'
           ).length,
         });
@@ -160,6 +165,7 @@ console.log("AI STATE =", aiAnalysis);
     >
       <LeafletPasarMap
         pasarData={filteredPasarData}
+        selectedPasar={selectedPasar}
         onMarkerClick={(props) => {
           setSelectedPasar(props);
           getAiAnalysis(props);
@@ -274,8 +280,11 @@ console.log("AI STATE =", aiAnalysis);
             bottom:14,
             left:14,
             zIndex:800,
-            width:'260px',
-            padding:'12px 14px',
+            width:'280px',
+            maxHeight:'620px',
+            display:'flex',
+            flexDirection:'column',
+
             background:'rgba(255,255,255,.97)',
             backdropFilter:'blur(12px)',
             borderRadius:'var(--radius-lg)',
@@ -346,48 +355,82 @@ console.log("AI STATE =", aiAnalysis);
           {loadingAI ? (
 
           <div
-            style={{
-              marginTop:'12px',
-              padding:'10px',
-              background:'#eff6ff',
-              borderRadius:'8px',
-              fontSize:'12px',
-              border:'1px solid #bfdbfe'
-            }}
+          style={{
+          padding:'16px',
+          fontSize:'12px'
+          }}
           >
-            🤖 AI sedang menganalisis...
+
+          🤖 AI sedang menganalisis...
+
           </div>
 
-        ) : aiAnalysis ? (
+          ) : (
 
           <div
-            style={{
-              marginTop:'12px',
-              padding:'10px',
-              background:'#f8fafc',
-              borderRadius:'8px',
-              border:'1px solid #e2e8f0'
-            }}
+          style={{
+          flex:1,
+          overflowY:'auto',
+          padding:'14px',
+          fontSize:'12px',
+          lineHeight:'1.7',
+          color:'#334155'
+          }}
           >
 
-            <strong>🤖 Analisis AI</strong>
+          <div
+          style={{
+          fontWeight:700,
+          marginBottom:'10px'
+          }}
+          >
 
-            <div
-              style={{
-                marginTop:'8px',
-                fontSize:'12px',
-                lineHeight:'1.7',
-                color:'#334155'
-              }}
-            >
-
-              {String(aiAnalysis)}
-
-            </div>
+          🤖 Analisis AI
 
           </div>
 
-        ) : null}
+          <ReactMarkdown
+          components={{
+
+          strong:({children})=>(
+
+          <strong
+          style={{
+          fontWeight:700,
+          color:"#111827"
+          }}
+          >
+
+          {children}
+
+          </strong>
+
+          ),
+
+          p:({children})=>(
+
+          <p
+          style={{
+          marginBottom:"12px"
+          }}
+          >
+
+          {children}
+
+          </p>
+
+          )
+
+          }}
+          >
+
+          {aiAnalysis}
+
+          </ReactMarkdown>
+
+          </div>
+
+          )}
 
         </div>
       )}

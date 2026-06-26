@@ -35,32 +35,67 @@ function getConfig(kategori) {
 }
 
 // ── SVG teardrop pin — runcing bawah, dot putih di tengah ───────────────────
-function createPinIcon(kategori) {
+function createPinIcon(kategori, active = false) {
   const { fill, stroke, glow } = getConfig(kategori);
-  const id = `glow-${kategori}`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38">
+  const size = active ? 40 : 30;
+  const height = active ? 50 : 38;
+
+  const svg = `
+  <svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="30"
+  height="38"
+  viewBox="0 0 30 38">
+
     <defs>
-      <filter id="${id}" x="-50%" y="-30%" width="200%" height="200%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${glow}" flood-opacity="1"/>
+      <filter id="glow-${kategori}">
+        <feDropShadow
+          dx="0"
+          dy="2"
+          stdDeviation="${active ? 7 : 3}"
+          flood-color="${glow}"
+          flood-opacity="1"/>
       </filter>
     </defs>
+
     <path
       d="M15 2C8.373 2 3 7.373 3 14C3 22 15 36 15 36C15 36 27 22 27 14C27 7.373 21.627 2 15 2Z"
-      fill="${fill}" stroke="${stroke}" stroke-width="1.5"
-      filter="url(#${id})"
+      fill="${fill}"
+      stroke="${stroke}"
+      stroke-width="${active ? 2.4 : 1.5}"
+      filter="url(#glow-${kategori})"
     />
-    <circle cx="15" cy="13.5" r="6" fill="white" opacity="0.92"/>
-    <circle cx="15" cy="13.5" r="2.8" fill="${stroke}"/>
+
+    <circle cx="15" cy="13.5"
+            r="${active ? 7 : 6}"
+            fill="white"/>
+
+    <circle cx="15" cy="13.5"
+            r="${active ? 3.5 : 2.8}"
+            fill="${stroke}"/>
+
   </svg>`;
 
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize: [30, 38],
-    iconAnchor: [15, 36],
-    popupAnchor: [0, -38],
-  });
+const scale = active ? 1.3 : 1;
+
+return L.divIcon({
+  html: `
+    <div
+      style="
+        transform: scale(${scale});
+        transform-origin: center bottom;
+        transition: transform .18s ease;
+      "
+    >
+      ${svg}
+    </div>
+  `,
+  className: '',
+  iconSize: [30, 38],
+  iconAnchor: [15, 36],
+  popupAnchor: [0, -38],
+});
 }
 
 // ── Popup HTML per pasar ─────────────────────────────────────────────────────
@@ -118,12 +153,17 @@ if (item.kategori === 'Di Bawah Rata-rata') {
 }
 
 // ── Layer marker, diperbarui setiap pasarData berubah ───────────────────────
-  function PasarMarkerLayer({
-    pasarData,
-    onMarkerClick
-  })  {
-  const map = useMap();
-  const layerRef = useRef(null);
+    function PasarMarkerLayer({
+      pasarData,
+      selectedPasar,
+      onMarkerClick
+    }) {
+
+      const map = useMap();
+
+      const layerRef = useRef(null);
+
+      const selectedMarkerRef = useRef(null);
 
   useEffect(() => {
     if (!layerRef.current) {
@@ -135,20 +175,59 @@ if (item.kategori === 'Di Bawah Rata-rata') {
     if (!pasarData?.length) return;
 
     pasarData.forEach((item) => {
-      const lat = Number(item.latitude);
-      const lng = Number(item.longitude);
+
+    if (
+      item.harga == null ||
+      Number(item.harga) <= 0
+    ) {
+      return;
+    }
+
+    const lat = Number(item.latitude);
+    const lng = Number(item.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      L.marker([lat, lng], {
-      icon: createPinIcon(item.kategori)
-    })
-    .on('click', () => {
+    const marker = L.marker([lat, lng], {
+    icon: createPinIcon(item.kategori, selectedPasar?.uid === item.uid)
+  });
+  marker.kategori = item.kategori;
 
-      if (onMarkerClick) {
-        onMarkerClick(item);
-      }
+  marker.bindTooltip(item.nama_pasar, {
+    direction: 'top',
+    offset: [0, -28],
+    opacity: 0.95,
+    sticky: true
+  });
 
-    })
+marker.on("click", () => {
+
+  if (selectedMarkerRef.current) {
+
+    selectedMarkerRef.current.setIcon(
+      createPinIcon(
+        selectedMarkerRef.current.kategori,
+        false
+      )
+    );
+
+    selectedMarkerRef.current.setZIndexOffset(0);
+  }
+
+  marker.setIcon(
+    createPinIcon(item.kategori, true)
+  );
+
+  marker.setZIndexOffset(1000);
+
+  selectedMarkerRef.current = marker;
+
+  if (onMarkerClick) {
+    onMarkerClick(item);
+  }
+
+});
+
+  marker
     .bindPopup(buildPopupHTML(item), {
       maxWidth: 270,
       className: 'pasar-popup',
@@ -164,6 +243,7 @@ if (item.kategori === 'Di Bawah Rata-rata') {
   const LeafletMapDynamic = ({
     className,
     pasarData = [],
+    selectedPasar,
     onMarkerClick
   }) => {
   const mapClassName = [styles.map, className].filter(Boolean).join(' ');
