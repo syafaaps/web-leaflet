@@ -57,109 +57,139 @@ export default async function handler(req, res) {
       provResult.rows[0]?.harga
     ) || 0;
 
-    const nearestResult = await pool.query(
+    // const nearestResult = await pool.query(
+    // `
+    // SELECT
+    //     p2.psr_nama,
+    //     ROUND(
+    //         (
+    //             ST_Distance(
+    //                 p1.geom::geography,
+    //                 p2.geom::geography
+    //             ) / 1000
+    //         )::numeric,
+    //         2
+    //     ) AS jarak_km
+    // FROM pasar p1
+    // JOIN pasar p2
+    // ON p1.id <> p2.id
+    // WHERE p1.psr_nama = $1
+    // ORDER BY p2.geom <-> p1.geom
+    // LIMIT 1
+    //     `,
+    // [
+    //   namaPasar
+    // ]
+    // );
+
+    // const pasarTerdekat =
+    // nearestResult.rows[0]?.psr_nama || '';
+
+    // const jarakKm =
+    // Number(
+    // nearestResult.rows[0]?.jarak_km
+    // ).toFixed(2);
+
+    // const hargaTerdekatResult = await pool.query(
+    // `
+    // SELECT
+    // k.harga
+    // FROM komoditas k
+    // JOIN pasar p
+    // ON k.pasar_id = p.id
+
+    // WHERE
+    // p.psr_nama = $1
+    // AND k.komoditas_nama = $2
+    // AND k.tanggal = $3
+
+    // LIMIT 1
+    // `,
+    // [
+    //   pasarTerdekat,
+    //   komoditas,
+    //   tanggal
+    // ]
+    // );
+
+    // const hargaPasarTerdekat =
+    // Number(
+    // hargaTerdekatResult.rows[0]?.harga
+    // ) || 0;
+
+    // let selisihPersen = 0;
+
+    // if (hargaPasarTerdekat > 0) {
+    //   selisihPersen =
+    //     (
+    //       (harga - hargaPasarTerdekat)
+    //       / hargaPasarTerdekat
+    //     ) * 100;
+    // }
+
+    // selisihPersen =
+    // Number(
+    //   selisihPersen.toFixed(2)
+    // );
+
+    const dataPasarResult = await pool.query(
     `
     SELECT
-        p2.psr_nama,
-        ROUND(
-            (
-                ST_Distance(
-                    p1.geom::geography,
-                    p2.geom::geography
-                ) / 1000
-            )::numeric,
-            2
-        ) AS jarak_km
-    FROM pasar p1
-    JOIN pasar p2
-    ON p1.id <> p2.id
-    WHERE p1.psr_nama = $1
-    ORDER BY p2.geom <-> p1.geom
-    LIMIT 1
-        `,
-    [
-      namaPasar
-    ]
-    );
-
-    const pasarTerdekat =
-    nearestResult.rows[0]?.psr_nama || '';
-
-    const jarakKm =
-    Number(
-    nearestResult.rows[0]?.jarak_km
-    ).toFixed(2);
-
-    const hargaTerdekatResult = await pool.query(
-    `
-    SELECT
-    k.harga
+        p.psr_nama,
+        k.harga
     FROM komoditas k
     JOIN pasar p
-    ON k.pasar_id = p.id
-
+        ON p.id = k.pasar_id
+    JOIN kab_kota kk
+        ON p.kabkota_id = kk.id
     WHERE
-    p.psr_nama = $1
-    AND k.komoditas_nama = $2
-    AND k.tanggal = $3
-
-    LIMIT 1
+        kk.kab_nama = $1
+        AND k.komoditas_nama = $2
+        AND k.tanggal = $3
+    ORDER BY k.harga DESC
     `,
     [
-      pasarTerdekat,
-      komoditas,
-      tanggal
+        kabupaten,
+        komoditas,
+        tanggal
     ]
     );
 
-    const hargaPasarTerdekat =
-    Number(
-    hargaTerdekatResult.rows[0]?.harga
-    ) || 0;
-
-    let selisihPersen = 0;
-
-    if (hargaPasarTerdekat > 0) {
-      selisihPersen =
-        (
-          (harga - hargaPasarTerdekat)
-          / hargaPasarTerdekat
-        ) * 100;
-    }
-
-    selisihPersen =
-    Number(
-      selisihPersen.toFixed(2)
-    );
+    const dataPasarKabupaten = dataPasarResult.rows;
 
     console.log(
-    'PASAR TERDEKAT =',
-    pasarTerdekat
-    );
+  "DATA PASAR KABUPATEN =",
+  JSON.stringify(dataPasarKabupaten, null, 2)
+);
 
-        console.log(
-    'JARAK =',
-    jarakKm,
-    'km'
-    );
+    // console.log(
+    // 'PASAR TERDEKAT =',
+    // pasarTerdekat
+    // );
 
-    console.log(
-    'HARGA PASAR TERDEKAT =',
-    hargaPasarTerdekat
-    );
+    //     console.log(
+    // 'JARAK =',
+    // jarakKm,
+    // 'km'
+    // );
 
-      console.log(
-      'SELISIH HARGA =',
-      selisihPersen,
-      '%'
-      );
-      const selisihAbsolut =
-    Math.abs(selisihPersen);
+    // console.log(
+    // 'HARGA PASAR TERDEKAT =',
+    // hargaPasarTerdekat
+    // );
 
-    console.log(
-    'SELISIH ABSOLUT =',
-    selisihAbsolut
-    );
+    //   console.log(
+    //   'SELISIH HARGA =',
+    //   selisihPersen,
+    //   '%'
+    //   );
+    //   const selisihAbsolut =
+    // Math.abs(selisihPersen);
+
+    // console.log(
+    // 'SELISIH ABSOLUT =',
+    // selisihAbsolut
+    // );
 
     console.log(
     "RATA PROVINSI =",
@@ -191,12 +221,13 @@ export default async function handler(req, res) {
       rataKabupaten,
       rataProvinsi,
 
-      pasarTerdekat,
-      jarakKm,
-      hargaPasarTerdekat,
+      // pasarTerdekat,
+      // jarakKm,
+      // hargaPasarTerdekat,
 
-      selisihPersen,
-      selisihAbsolut
+      // selisihPersen,
+      // selisihAbsolut,
+      dataPasarKabupaten
     }),
   });
   console.log("SUDAH FETCH");

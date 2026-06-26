@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import ReactMarkdown from "react-markdown";
 
 const LeafletHeatmapMap = dynamic(
   () => import('../../Map/LeafletHeatmapMap'),
@@ -343,68 +344,106 @@ const getAiAnalysis = async () => {
         )}
       </div>
             {/* Panel AI Provinsi */}
-            <div
-              style={{
-                position:'absolute',
-                bottom:14,
-                right:14,
-                zIndex:800,
-                width:'260px',
-                background:'rgba(255,255,255,.97)',
-                backdropFilter:'blur(12px)',
-                borderRadius:'var(--radius-lg)',
-                border:'1px solid var(--c-border)',
-                boxShadow:'var(--shadow-md)',
-                padding:'12px 14px'
-              }}
-            >
+              <div
+                style={{
+                  position:'absolute',
+                  bottom:14,
+                  right:14,
+                  zIndex:800,
+                  width:'280px',
+                  maxHeight:'620px',
+                  display:'flex',
+                  flexDirection:'column',
+
+                  background:'rgba(255,255,255,.97)',
+                  backdropFilter:'blur(12px)',
+                  borderRadius:'var(--radius-lg)',
+                  border:'1px solid var(--c-border)',
+                  boxShadow:'var(--shadow-md)'
+                }}
+              >
 
               <div
                 style={{
-                  fontSize:'10px',
-                  fontWeight:700,
-                  letterSpacing:'.07em',
-                  textTransform:'uppercase',
-                  color:'var(--c-muted)',
-                  marginBottom:'6px'
+                  padding:'12px 14px',
+                  borderBottom:'1px solid var(--c-border)'
                 }}
               >
-                🤖 AI Jawa Timur
-              </div>
+                <div
+                  style={{
+                    fontSize:'10px',
+                    fontWeight:700,
+                    letterSpacing:'.07em',
+                    textTransform:'uppercase',
+                    color:'var(--c-muted)',
+                    marginBottom:'6px'
+                  }}
+                >
+                  🤖 AI Jawa Timur
+                </div>
 
-              <div
-                style={{
-                  fontSize:'11px',
-                  color:'var(--c-muted)',
-                  marginBottom:'8px'
-                }}
-              >
-                {activeKom} · {selectedDate || 'Tanggal terbaru'}
+                <div
+                  style={{
+                    fontSize:'11px',
+                    color:'var(--c-muted)'
+                  }}
+                >
+                  {activeKom} · {selectedDate || 'Tanggal terbaru'}
+                </div>
               </div>
 
               {loadingAI ? (
 
-                <div
-                  style={{
-                    fontSize:'12px'
-                  }}
-                >
-                  AI sedang menganalisis...
-                </div>
+              <div
+                style={{
+                  padding: '16px',
+                  fontSize: '12px'
+                }}
+              >
+                AI sedang menganalisis...
+              </div>
 
-              ) : (
+            ) : (
 
-                <div
-                  style={{
-                    fontSize:'12px',
-                    lineHeight:'1.7',
-                    color:'#334155'
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '14px',
+                  fontSize: '12px',
+                  lineHeight: '1.7',
+                  color: '#334155'
+                }}
+              >
+                <ReactMarkdown
+                  components={{
+                    strong: ({ children }) => (
+                      <strong
+                        style={{
+                          fontWeight: 700,
+                          color: "#111827"
+                        }}
+                      >
+                        {children}
+                      </strong>
+                    ),
+
+                    p: ({ children }) => (
+                      <p
+                        style={{
+                          marginBottom: "12px"
+                        }}
+                      >
+                        {children}
+                      </p>
+                    )
                   }}
                 >
                   {aiAnalysis}
-                </div>
+                </ReactMarkdown>
+              </div>
 
-              )}
+            )}
 
             </div>
     </div>

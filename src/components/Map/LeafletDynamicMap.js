@@ -4,43 +4,96 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './Map.module.scss';
 
-function getPriceColor(harga, min, max) {
-  if (!harga || max <= min) return '#e5e7eb';
-  const ratio = (harga - min) / (max - min);
-  if (ratio < 0.25) return '#86efac';
-  if (ratio < 0.50) return '#fde68a';
-  if (ratio < 0.75) return '#fca5a5';
-  return '#ef4444';
+// ── Konfigurasi warna per kategori ──────────────────────────────────────────
+const KATEGORI_CONFIG = {
+  'Di Atas Rata-rata': {
+    fill: '#ef4444',
+    stroke: '#b91c1c',
+    glow: 'rgba(239,68,68,0.4)',
+    emoji: '🔴'
+  },
+
+  'Rata-rata': {
+    fill: '#f97316',
+    stroke: '#c2410c',
+    glow: 'rgba(249,115,22,0.4)',
+    emoji: '🟠'
+  },
+
+  'Di Bawah Rata-rata': {
+    fill: '#22c55e',
+    stroke: '#15803d',
+    glow: 'rgba(34,197,94,0.4)',
+    emoji: '🟢'
+  },
+};
+
+function getConfig(kategori) {
+  return KATEGORI_CONFIG[kategori] ?? KATEGORI_CONFIG['Rata-rata'];
 }
 
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return { r, g, b };
-}
+// ── SVG teardrop pin — runcing bawah, dot putih di tengah ───────────────────
+function createPinIcon(kategori, active = false) {
+  const { fill, stroke, glow } = getConfig(kategori);
 
-function createPinIcon(hexColor) {
-  const { r, g, b } = hexToRgb(hexColor);
-  const glow = `rgba(${r},${g},${b},0.4)`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38">
+  const size = active ? 40 : 30;
+  const height = active ? 50 : 38;
+
+  const svg = `
+  <svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="30"
+  height="38"
+  viewBox="0 0 30 38">
+
     <defs>
-      <filter id="g" x="-50%" y="-30%" width="200%" height="200%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${glow}" flood-opacity="1"/>
+      <filter id="glow-${kategori}">
+        <feDropShadow
+          dx="0"
+          dy="2"
+          stdDeviation="${active ? 7 : 3}"
+          flood-color="${glow}"
+          flood-opacity="1"/>
       </filter>
     </defs>
-    <path d="M15 2C8.373 2 3 7.373 3 14C3 22 15 36 15 36C15 36 27 22 27 14C27 7.373 21.627 2 15 2Z"
-      fill="${hexColor}" stroke="${hexColor}" stroke-width="1.5" filter="url(#g)"/>
-    <circle cx="15" cy="13.5" r="6" fill="white" opacity="0.92"/>
-    <circle cx="15" cy="13.5" r="2.8" fill="${hexColor}"/>
+
+    <path
+      d="M15 2C8.373 2 3 7.373 3 14C3 22 15 36 15 36C15 36 27 22 27 14C27 7.373 21.627 2 15 2Z"
+      fill="${fill}"
+      stroke="${stroke}"
+      stroke-width="${active ? 2.4 : 1.5}"
+      filter="url(#glow-${kategori})"
+    />
+
+    <circle cx="15" cy="13.5"
+            r="${active ? 7 : 6}"
+            fill="white"/>
+
+    <circle cx="15" cy="13.5"
+            r="${active ? 3.5 : 2.8}"
+            fill="${stroke}"/>
+
   </svg>`;
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize: [30, 38],
-    iconAnchor: [15, 36],
-    popupAnchor: [0, -38],
-  });
+
+const scale = active ? 1.3 : 1;
+
+return L.divIcon({
+  html: `
+    <div
+      style="
+        transform: scale(${scale});
+        transform-origin: center bottom;
+        transition: transform .18s ease;
+      "
+    >
+      ${svg}
+    </div>
+  `,
+  className: '',
+  iconSize: [30, 38],
+  iconAnchor: [15, 36],
+  popupAnchor: [0, -38],
+});
 }
 
 const fmtHarga = (n) => n ? 'Rp ' + Number(n).toLocaleString('id-ID') : '—';
@@ -90,9 +143,18 @@ function buildPopupHTML(item, weatherId) {
     </div>`;
 }
 
-function PasarMarkerLayer({ pasarData, onMarkerClick, hargaMin, hargaMax }) {
-  const map = useMap();
-  const layerRef = useRef(null);
+// ── Layer marker, diperbarui setiap pasarData berubah ───────────────────────
+    function PasarMarkerLayer({
+      pasarData,
+      selectedPasar,
+      onMarkerClick
+    }) {
+
+      const map = useMap();
+
+      const layerRef = useRef(null);
+
+      const selectedMarkerRef = useRef(null);
 
   useEffect(() => {
     if (!layerRef.current) {
@@ -102,51 +164,78 @@ function PasarMarkerLayer({ pasarData, onMarkerClick, hargaMin, hargaMax }) {
     }
     if (!pasarData?.length) return;
 
-    const mn = hargaMin ?? Math.min(...pasarData.map(p => Number(p.harga)).filter(v => !isNaN(v)), 0);
-    const mx = hargaMax ?? Math.max(...pasarData.map(p => Number(p.harga)).filter(v => !isNaN(v)), 1);
+    pasarData.forEach((item) => {
 
-    pasarData.forEach((item, idx) => {
-      const lat = Number(item.latitude);
-      const lng = Number(item.longitude);
+    if (
+      item.harga == null ||
+      Number(item.harga) <= 0
+    ) {
+      return;
+    }
+
+    const lat = Number(item.latitude);
+    const lng = Number(item.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const h = Number(item.harga);
-      const color = h && mx > mn ? getPriceColor(h, mn, mx) : '#e5e7eb';
-      const weatherId = 'w-' + (item.pasar_id || item.id || idx);
+    const marker = L.marker([lat, lng], {
+    icon: createPinIcon(item.kategori, selectedPasar?.uid === item.uid)
+  });
+  marker.kategori = item.kategori;
 
-      L.marker([lat, lng], { icon: createPinIcon(color) })
-        .on('click', () => { if (onMarkerClick) onMarkerClick(item); })
-        .bindPopup(buildPopupHTML(item, weatherId), {
-          maxWidth: 260,
-          className: 'pasar-popup',
-        })
-        .on('popupopen', () => {
-          const el = document.getElementById(weatherId);
-          if (!el || el.dataset.loaded) return;
-          el.dataset.loaded = 'true';
-          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=auto`)
-            .then(r => r.json())
-            .then(d => {
-              const t = d.current.temperature_2m;
-              const c = d.current.weather_code;
-              el.innerHTML = `<span class="weather-icon">${getWeatherIcon(c)}</span><span class="weather-temp">${Math.round(t)}°C</span><span class="weather-desc">${getWeatherDesc(c)}</span>`;
-            })
-            .catch(() => { el.innerHTML = '<span style="color:#9ca3af">Cuaca tidak tersedia</span>'; });
-        })
-        .addTo(layerRef.current);
+  marker.bindTooltip(item.nama_pasar, {
+    direction: 'top',
+    offset: [0, -28],
+    opacity: 0.95,
+    sticky: true
+  });
+
+marker.on("click", () => {
+
+  if (selectedMarkerRef.current) {
+
+    selectedMarkerRef.current.setIcon(
+      createPinIcon(
+        selectedMarkerRef.current.kategori,
+        false
+      )
+    );
+
+    selectedMarkerRef.current.setZIndexOffset(0);
+  }
+
+  marker.setIcon(
+    createPinIcon(item.kategori, true)
+  );
+
+  marker.setZIndexOffset(1000);
+
+  selectedMarkerRef.current = marker;
+
+  if (onMarkerClick) {
+    onMarkerClick(item);
+  }
+
+});
+
+  marker
+    .bindPopup(buildPopupHTML(item), {
+      maxWidth: 270,
+      className: 'pasar-popup',
+    })
+    .addTo(layerRef.current);
     });
   }, [pasarData, map, onMarkerClick, hargaMin, hargaMax]);
 
   return null;
 }
 
-const LeafletMapDynamic = ({
-  className,
-  pasarData = [],
-  onMarkerClick,
-  hargaMin,
-  hargaMax,
-}) => {
+// ── Komponen utama ───────────────────────────────────────────────────────────
+  const LeafletMapDynamic = ({
+    className,
+    pasarData = [],
+    selectedPasar,
+    onMarkerClick
+  }) => {
   const mapClassName = [styles.map, className].filter(Boolean).join(' ');
 
   return (
