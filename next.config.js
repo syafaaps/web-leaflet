@@ -22,7 +22,8 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://labai.polinema.ac.id:9800/api/:path*'
+        // destination: 'http://labai.polinema.ac.id:9800/api/:path*'
+        destination: 'http://192.168.60.110:98/api/:path*'
       }
     ]
   }
