@@ -1,9 +1,7 @@
-// components/Map/LeafletDynamicMap.js
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-
 import styles from './Map.module.scss';
 
 // ── Konfigurasi warna per kategori ──────────────────────────────────────────
@@ -98,57 +96,48 @@ return L.divIcon({
 });
 }
 
-// ── Popup HTML per pasar ─────────────────────────────────────────────────────
+const fmtHarga = (n) => n ? 'Rp ' + Number(n).toLocaleString('id-ID') : '—';
+
+function getWeatherIcon(code) {
+  if (code === 0) return '\u2600\uFE0F';
+  if (code <= 2) return '\u26C5';
+  if (code === 3 || code >= 45) return '\u2601\uFE0F';
+  if (code >= 51 && code <= 55) return '\uD83C\uDF26\uFE0F';
+  if (code >= 61 && code <= 65) return '\uD83C\uDF27\uFE0F';
+  if (code >= 71 && code <= 75) return '\u2744\uFE0F';
+  if (code >= 80 && code <= 82) return '\uD83C\uDF27\uFE0F';
+  if (code >= 95) return '\u26C8\uFE0F';
+  return '\uD83C\uDF24\uFE0F';
+}
+
+function getWeatherDesc(code) {
+  const m = {
+    0: 'Cerah', 1: 'Cerah berawan', 2: 'Berawan', 3: 'Mendung',
+    45: 'Berkabut', 48: 'Kabut beku',
+    51: 'Gerimis ringan', 53: 'Gerimis', 55: 'Gerimis deras',
+    56: 'Gerimis beku ringan', 57: 'Gerimis beku',
+    61: 'Hujan ringan', 63: 'Hujan', 65: 'Hujan deras',
+    66: 'Hujan beku ringan', 67: 'Hujan beku',
+    71: 'Salju ringan', 73: 'Salju', 75: 'Salju deras', 77: 'Butiran salju',
+    80: 'Hujan ringan', 81: 'Hujan', 82: 'Hujan deras',
+    85: 'Salju ringan', 86: 'Salju deras',
+    95: 'Badai', 96: 'Badai', 99: 'Badai'
+  };
+  return m[code] || 'Tidak diketahui';
+}
+
 function buildPopupHTML(item) {
-  const { fill, stroke, emoji } = getConfig(item.kategori);
-  const harga    = item.harga    ? `Rp ${Number(item.harga).toLocaleString('id-ID')}` : '-';
-  const rata     = item.rata_prov? `Rp ${Number(item.rata_prov).toLocaleString('id-ID')}` : '-';
-  const pct      = Number(item.persen_deviasi ?? 0);
-  const pctStr   = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
-  let pctColor = '#f97316';
-
-if (item.kategori === 'Di Atas Rata-rata') {
-  pctColor = '#ef4444';
-}
-
-if (item.kategori === 'Di Bawah Rata-rata') {
-  pctColor = '#22c55e';
-}
-  const tgl      = item.tanggal
-    ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '-';
-
+  const harga = fmtHarga(item.harga);
+  const sub = [item.kabupaten, item.provinsi].filter(Boolean).join(', ');
+  const records = item.total_records || item.total_data || 0;
   return `
-    <div style="font-family:'DM Sans',system-ui,sans-serif;min-width:210px;max-width:250px;">
-      <div style="background:${fill};padding:10px 13px 8px;border-radius:9px 9px 0 0;">
-        <div style="font-weight:800;font-size:13px;color:white;margin-bottom:2px;line-height:1.3;">${item.nama_pasar}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.85);">📍 ${item.kabupaten}</div>
-      </div>
-      <div style="padding:10px 13px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 9px 9px;background:#fff;">
-        <div style="font-size:10.5px;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">
-          ${item.komoditas_nama ?? '-'} · ${tgl}
-        </div>
-        <div style="font-size:24px;font-weight:800;color:${stroke};letter-spacing:-1px;margin-bottom:9px;line-height:1;">
-          ${harga}
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;border-top:1px solid #f3f4f6;padding-top:7px;">
-          <div>
-            <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;">Rata prov.</div>
-            <div style="font-weight:600;color:#374151;">${rata}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;">Deviasi</div>
-            <div style="font-weight:700;color:${pctColor};">${pctStr}</div>
-          </div>
-        </div>
-        <div style="margin-top:9px;">
-          <span style="
-            display:inline-block;padding:3px 11px;border-radius:20px;
-            font-size:11px;font-weight:700;letter-spacing:.03em;
-            background:${fill}18;color:${stroke};border:1px solid ${fill}50;
-          ">${emoji} ${item.kategori}</span>
-        </div>
-      </div>
+    <div class="map-popup">
+      <div class="map-popup-name">${item.nama_pasar || item.nama || '—'}</div>
+      ${sub ? `<div class="map-popup-sub">${sub}</div>` : ''}
+      <hr class="map-popup-divider" />
+      <div class="map-popup-price">${harga}</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:2px">${records} record</div>
+      <div class="popup-weather"><span class="weather-loading">Memuat cuaca...</span></div>
     </div>`;
 }
 
@@ -171,7 +160,6 @@ if (item.kategori === 'Di Bawah Rata-rata') {
     } else {
       layerRef.current.clearLayers();
     }
-
     if (!pasarData?.length) return;
 
     pasarData.forEach((item) => {
@@ -232,6 +220,30 @@ marker.on("click", () => {
       maxWidth: 270,
       className: 'pasar-popup',
     })
+    .on('popupopen', () => {
+      const popupEl = marker.getPopup()?.getElement();
+      if (!popupEl) return;
+      const weatherEl = popupEl.querySelector('.popup-weather');
+      if (!weatherEl || weatherEl.dataset.loaded) return;
+      weatherEl.dataset.loaded = '1';
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+        .then(r => r.json())
+        .then(data => {
+          const cw = data.current_weather;
+          if (!cw) {
+            weatherEl.innerHTML = '<span class="weather-loading">Cuaca tidak tersedia</span>';
+            return;
+          }
+          weatherEl.innerHTML = `
+            <span class="weather-icon">${getWeatherIcon(cw.weathercode)}</span>
+            <span class="weather-temp">${cw.temperature}°C</span>
+            <span class="weather-desc">${getWeatherDesc(cw.weathercode)}</span>
+          `;
+        })
+        .catch(() => {
+          weatherEl.innerHTML = '<span class="weather-loading">Gagal memuat cuaca</span>';
+        });
+    })
     .addTo(layerRef.current);
     });
   }, [pasarData, map, onMarkerClick]);
@@ -252,36 +264,32 @@ marker.on("click", () => {
     <>
       <style>{`
         .pasar-popup .leaflet-popup-content-wrapper {
-          padding: 0;
-          border-radius: 10px;
-          box-shadow: 0 8px 30px rgba(0,0,0,0.14);
+          border-radius: var(--radius-sm, 6px) !important;
+          border: 1px solid var(--border, #e5e7eb) !important;
+          box-shadow: var(--shadow, 0 4px 16px rgba(0,0,0,.12)) !important;
+          font-family: var(--font), sans-serif !important;
           overflow: hidden;
-          border: none;
         }
-        .pasar-popup .leaflet-popup-content { margin: 0; width: auto !important; }
-        .pasar-popup .leaflet-popup-tip-container { display: none; }
+        .pasar-popup .leaflet-popup-content { margin: 10px 14px; width: auto !important; }
+        .pasar-popup .leaflet-popup-tip { box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,.12)) !important; }
       `}</style>
-
       <MapContainer
         className={mapClassName}
         center={[-7.5, 112.5]}
         zoom={8}
         style={{ height: '100%', width: '100%' }}
       >
-        {/* CartoDB Positron: tile bersih, cocok buat data viz */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         />
-
         <PasarMarkerLayer
-        pasarData={pasarData}
-        onMarkerClick={onMarkerClick}
-      />
+          pasarData={pasarData}
+          onMarkerClick={onMarkerClick}
+        />
       </MapContainer>
     </>
   );
 };
 
 export default LeafletMapDynamic;
-
