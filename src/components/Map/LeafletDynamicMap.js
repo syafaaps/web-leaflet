@@ -126,7 +126,7 @@ function getWeatherDesc(code) {
   return m[code] || 'Tidak diketahui';
 }
 
-function buildPopupHTML(item, weatherId) {
+function buildPopupHTML(item) {
   const harga = fmtHarga(item.harga);
   const sub = [item.kabupaten, item.provinsi].filter(Boolean).join(', ');
   const records = item.total_records || item.total_data || 0;
@@ -137,9 +137,7 @@ function buildPopupHTML(item, weatherId) {
       <hr class="map-popup-divider" />
       <div class="map-popup-price">${harga}</div>
       <div style="font-size:12px;color:#9ca3af;margin-top:2px">${records} record</div>
-      <div class="popup-weather" id="${weatherId}">
-        <span class="weather-loading">Memuat cuaca...</span>
-      </div>
+      <div class="popup-weather"><span class="weather-loading">Memuat cuaca...</span></div>
     </div>`;
 }
 
@@ -222,9 +220,33 @@ marker.on("click", () => {
       maxWidth: 270,
       className: 'pasar-popup',
     })
+    .on('popupopen', () => {
+      const popupEl = marker.getPopup()?.getElement();
+      if (!popupEl) return;
+      const weatherEl = popupEl.querySelector('.popup-weather');
+      if (!weatherEl || weatherEl.dataset.loaded) return;
+      weatherEl.dataset.loaded = '1';
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+        .then(r => r.json())
+        .then(data => {
+          const cw = data.current_weather;
+          if (!cw) {
+            weatherEl.innerHTML = '<span class="weather-loading">Cuaca tidak tersedia</span>';
+            return;
+          }
+          weatherEl.innerHTML = `
+            <span class="weather-icon">${getWeatherIcon(cw.weathercode)}</span>
+            <span class="weather-temp">${cw.temperature}°C</span>
+            <span class="weather-desc">${getWeatherDesc(cw.weathercode)}</span>
+          `;
+        })
+        .catch(() => {
+          weatherEl.innerHTML = '<span class="weather-loading">Gagal memuat cuaca</span>';
+        });
+    })
     .addTo(layerRef.current);
     });
-  }, [pasarData, map, onMarkerClick, hargaMin, hargaMax]);
+  }, [pasarData, map, onMarkerClick]);
 
   return null;
 }
@@ -241,9 +263,15 @@ marker.on("click", () => {
   return (
     <>
       <style>{`
-        .pasar-popup .leaflet-popup-content-wrapper { padding: 0; border-radius: 0; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+        .pasar-popup .leaflet-popup-content-wrapper {
+          border-radius: var(--radius-sm, 6px) !important;
+          border: 1px solid var(--border, #e5e7eb) !important;
+          box-shadow: var(--shadow, 0 4px 16px rgba(0,0,0,.12)) !important;
+          font-family: var(--font), sans-serif !important;
+          overflow: hidden;
+        }
         .pasar-popup .leaflet-popup-content { margin: 10px 14px; width: auto !important; }
-        .pasar-popup .leaflet-popup-tip { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+        .pasar-popup .leaflet-popup-tip { box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,.12)) !important; }
       `}</style>
       <MapContainer
         className={mapClassName}
@@ -258,8 +286,6 @@ marker.on("click", () => {
         <PasarMarkerLayer
           pasarData={pasarData}
           onMarkerClick={onMarkerClick}
-          hargaMin={hargaMin}
-          hargaMax={hargaMax}
         />
       </MapContainer>
     </>

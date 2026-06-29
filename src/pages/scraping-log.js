@@ -43,13 +43,13 @@ export default function ScrapingLog() {
     <GeoAgriLayout title="Scraping Log">
       <Head><title>Scraping Log — GeoAgri</title></Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.6px", color: "var(--text)" }}>Scraping Log</h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>Riwayat dan status proses scraping data harga komoditas.</p>
+      <div className="page-header">
+        <h1 className="page-title">Scraping Log</h1>
+        <p className="page-desc">Riwayat dan status proses scraping data harga komoditas.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
-        <StatCard label="Total Hari Ini" value={meta.total_hari_ini || "—"} color="#2d3bde" />
+        <StatCard label="Total Hari Ini" value={meta.total_hari_ini || "—"} />
         <StatCard label="Sukses" value={meta.total_success || "—"} color="#16a34a" />
         <StatCard label="Gagal" value={meta.total_failed || "—"} color="#dc2626" />
         <StatCard label="Terakhir" value={meta.last_scraping ? new Date(meta.last_scraping).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} color="#6b7280" />

@@ -1,4 +1,4 @@
-﻿export default function StatCard({ label, value, sub, color = "#2d3bde", children }) {
+﻿export default function StatCard({ label, value, sub, color = "#155233", children }) {
   return (
     <div style={{
       background: "var(--bg-white)", border: "1px solid var(--border)",

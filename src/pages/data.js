@@ -124,9 +124,9 @@ export default function DataPage() {
     <GeoAgriLayout title="Data">
       <Head><title>Data Komoditas — GeoAgri</title></Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.6px", color: "var(--text)" }}>Data Komoditas</h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>Dataset harga komoditas hasil scraping dari seluruh pasar.</p>
+      <div className="page-header">
+        <h1 className="page-title">Data Komoditas</h1>
+        <p className="page-desc">Dataset harga komoditas hasil scraping dari seluruh pasar.</p>
       </div>
 
       <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -266,7 +266,6 @@ export default function DataPage() {
         .dt-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-white); font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
         .dt-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
         .dt-btn:disabled { opacity: .35; cursor: default; }
-        .geo-card { background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
       `}</style>
     </GeoAgriLayout>
   );

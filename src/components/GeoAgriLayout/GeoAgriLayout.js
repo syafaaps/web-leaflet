@@ -23,9 +23,13 @@ export default function GeoAgriLayout({ title, children, hideSidebar }) {
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>
-          <div className={styles.brandName}>GeoAgri</div>
-          <div className={styles.brandSub}>Analytic Curator</div>
+        <div style={{
+          background: "linear-gradient(135deg, #155233, #1e7a52)",
+          padding: "20px 20px 16px", borderBottom: "1px solid var(--sidebar-border)",
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "rgba(255,255,255,.55)", marginBottom: 4 }}>Jawa Timur</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-.4px", lineHeight: 1.2 }}>GeoAgri</div>
+          <div style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "1px", color: "rgba(255,255,255,.6)", marginTop: 2 }}>Analytic Curator</div>
         </div>
         <nav className={styles.nav}>
           {navItems.map((item) => {

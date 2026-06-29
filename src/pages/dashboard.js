@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import FilterBar from "@components/UI/FilterBar";
+import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
 const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
@@ -16,41 +17,29 @@ let trendChartInstance = null;
 export default function DashboardPage() {
   const canvasRef = useRef(null);
   const mapRef = useRef(null);
-  const [state, setState] = useState({ komoditas_ids: [], provinsi_id: null, pasar_id: null, range: 30 });
+  const [state, setState] = useState({ komoditas_ids: [], provinsi_ids: [], range: 30 });
   const [stats, setStats] = useState({});
   const [chartData, setChartData] = useState(null);
   const [komoditasItems, setKomoditasItems] = useState([]);
   const [komoditasIndex, setKomoditasIndex] = useState({});
-  const [pasarItems, setPasarItems] = useState([]);
+  const [provinsiItems, setProvinsiItems] = useState([]);
   const [mapData, setMapData] = useState(null);
   const [mapReady, setMapReady] = useState(false);
 
   const loadMaster = useCallback(async () => {
-    const [kom, prov, pas] = await Promise.all([
+    const [kom, prov] = await Promise.all([
       api("/api/master/komoditas"),
       api("/api/master/provinsi"),
-      api("/api/master/pasar")
     ]);
     const idx = {};
     kom.data.forEach(k => { idx[k.id] = `${k.nama} (${k.satuan ?? "-"})`; });
     setKomoditasIndex(idx);
     setKomoditasItems(kom.data);
-    setPasarItems(pas.data ?? []);
+    setProvinsiItems(prov.data ?? []);
     if (kom.data.length) {
       setState(s => ({ ...s, komoditas_ids: [String(kom.data[0].id)] }));
     }
-    document.getElementById("filterProvinsi").innerHTML = '<option value="">Semua Provinsi</option>' +
-      prov.data.map(p => `<option value="${p.id}">${p.nama}</option>`).join("");
-    syncPasarOptions(pas.data ?? [], null);
   }, []);
-
-  function syncPasarOptions(pasarItems, provinsiId) {
-    const sel = document.getElementById("filterPasar");
-    if (!sel) return;
-    const filtered = provinsiId ? pasarItems.filter(p => String(p.provinsi_id) === String(provinsiId)) : pasarItems;
-    sel.innerHTML = '<option value="">Semua Pasar</option>' + filtered.map(p => `<option value="${p.id}">${p.nama}</option>`).join("");
-    sel.disabled = filtered.length === 0;
-  }
 
   const loadStats = useCallback(async () => {
     const aktif = state.komoditas_ids[0];
@@ -71,7 +60,7 @@ export default function DashboardPage() {
     ));
     const series = responses.filter(r => r.status === "success").map((r, i) => ({
       label: komoditasIndex[ids[i]] || `#${ids[i]}`,
-      color: ["#2d3bde", "#a5b4fc", "#16a34a", "#ea580c", "#7c3aed"][i % 5],
+      color: ["#155233", "#3aab74", "#16a34a", "#ea580c", "#7c3aed"][i % 5],
       points: r.data.map(d => ({ tanggal: d.tanggal, harga: d.harga })),
     }));
     if (!series.length) return;
@@ -120,12 +109,6 @@ export default function DashboardPage() {
     };
   }, [mapData, komoditasIndex, state.komoditas_ids]);
 
-  const handleProvChange = (e) => {
-    const pid = e.target.value || null;
-    setState(s => ({ ...s, provinsi_id: pid }));
-    syncPasarOptions(pasarItems, pid);
-  };
-
   return (
     <GeoAgriLayout title="Dashboard">
       <Head><title>Dashboard — GeoAgri</title></Head>
@@ -135,8 +118,14 @@ export default function DashboardPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
           Filter Data:
         </span>
-        <select id="filterProvinsi" onChange={handleProvChange} className="geo-select" />
-        <select id="filterPasar" className="geo-select" />
+        <select multiple value={state.provinsi_ids}
+          onChange={e => {
+            const vals = Array.from(e.target.selectedOptions, opt => opt.value);
+            setState(s => ({ ...s, provinsi_ids: vals }));
+          }}
+          className="geo-select geo-select-multi">
+          {provinsiItems.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
+        </select>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="date" id="filterMapTanggal" className="geo-date-input" onChange={() => loadMap()} />
         </div>
@@ -169,7 +158,7 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
-        <StatCard label="Total Komoditas" value={stats.total_komoditas} color="#2d3bde" />
+        <StatCard label="Total Komoditas" value={stats.total_komoditas} />
         <StatCard label="Total Pasar" value={stats.total_pasar} color="#7c3aed" sub={<span style={{ color: "var(--text-muted)" }}>Nasional</span>} />
         <StatCard label="Data Valid" value={stats.data_valid} color="#16a34a" sub={<span className="geo-badge geo-badge-green">? {stats.data_valid_pct?.toFixed(1)}%</span>} />
         <StatCard label="Data NULL" value={stats.data_null} color="#dc2626" sub={<span className="geo-badge geo-badge-red">Butuh Sinkron</span>} />
@@ -222,6 +211,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga (Grafana)</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Panel embedded dari Grafana dashboard</div>
+          </div>
+        </div>
+        <GrafanaEmbed
+          panelId="panel-2"
+          komoditasIds={state.komoditas_ids}
+          provinsiIds={state.provinsi_ids}
+          range={state.range}
+          tab="analisis-tren-harga-komoditas"
+        />
+      </div>
+
       <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
@@ -238,44 +243,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <style jsx global>{`
-        .geo-select {
-          background: var(--bg); border: 1px solid var(--border); color: var(--text);
-          padding: 7px 32px 7px 12px; border-radius: var(--radius-sm);
-          font-family: var(--font); font-size: 13px; font-weight: 500;
-          cursor: pointer; appearance: none; min-width: 160px;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 10px center;
-        }
-        .geo-select:focus { outline: none; border-color: var(--primary); }
-        .geo-date-input {
-          background: var(--bg); border: 1px solid var(--border); color: var(--text);
-          padding: 7px 12px; border-radius: var(--radius-sm);
-          font-family: var(--font); font-size: 13px; font-weight: 500;
-          cursor: pointer; min-width: 140px;
-        }
-        .geo-date-input:focus { outline: none; border-color: var(--primary); }
-        .geo-range-btn {
-          padding: 7px 14px; border-radius: var(--radius-sm);
-          border: 1px solid var(--border); background: var(--bg);
-          font-family: var(--font); font-size: 12px; font-weight: 500;
-          color: var(--text-muted); cursor: pointer; transition: all .15s;
-        }
-        .geo-range-btn.active, .geo-range-btn:hover {
-          background: var(--primary-10); color: var(--primary); border-color: var(--primary-20);
-        }
-        .geo-card {
-          background: var(--bg-white); border: 1px solid var(--border);
-          border-radius: var(--radius); box-shadow: var(--shadow-sm);
-        }
-        .geo-badge {
-          display: inline-flex; align-items: center; padding: 2px 8px;
-          border-radius: 20px; font-size: 11px; font-weight: 600;
-          font-family: var(--mono); letter-spacing: .3px;
-        }
-        .geo-badge-green { background: var(--green-10); color: var(--green); }
-        .geo-badge-red { background: var(--red-10); color: var(--red); }
-      `}</style>
+
     </GeoAgriLayout>
   );
 }

@@ -2,16 +2,16 @@
   --sidebar-w: 210px;
   --header-h: 56px;
 
-  --bg: #f5f6fa;
+  --bg: #f5f8f5;
   --bg-white: #ffffff;
-  --bg-muted: #f0f1f6;
+  --bg-muted: #edf2ed;
 
   --sidebar-bg: #ffffff;
-  --sidebar-border: #e8eaf0;
+  --sidebar-border: #daeae1;
 
-  --primary: #2d3bde;
-  --primary-10: rgba(45, 59, 222, .08);
-  --primary-20: rgba(45, 59, 222, .16);
+  --primary: #155233;
+  --primary-10: rgba(21, 82, 51, .08);
+  --primary-20: rgba(21, 82, 51, .16);
 
   --green: #16a34a;
   --green-10: rgba(22, 163, 74, .10);
@@ -72,6 +72,17 @@ a { text-decoration: none; color: inherit; }
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 3px;
+}
+
+/* ── Range / Toggle Buttons ──────────────────────── */
+.geo-range-btn {
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg);
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; transition: all .15s;
+}
+.geo-range-btn.active, .geo-range-btn:hover {
+  background: var(--primary-10); color: var(--primary); border-color: var(--primary-20);
 }
 
 /* ── Filter Bar ──────────────────────────────────── */
@@ -339,3 +350,18 @@ a { text-decoration: none; color: inherit; }
   color: var(--text-light);
   margin-left: auto;
 }
+
+/* ── Table ───────────────────────────────────────── */
+.geo-table { width: 100%; border-collapse: collapse; }
+.geo-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); text-align: left; padding: 0 0 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.geo-table td { padding: 12px 0; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--bg-muted); vertical-align: middle; }
+.geo-mono { font-family: var(--mono); font-weight: 600; }
+.geo-page-btn { width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-white); font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.geo-page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.geo-page-btn:disabled { opacity: .35; cursor: default; }
+
+/* ── Badge ───────────────────────────────────────── */
+.geo-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--mono); letter-spacing: .3px; }
+.geo-badge-green { background: var(--green-10); color: var(--green); }
+.geo-badge-red { background: var(--red-10); color: var(--red); }
+.geo-badge-orange { background: var(--orange-10); color: var(--orange); }

@@ -84,11 +84,17 @@ export default function PetaPasar() {
   }, [geoData, komoditasTerpilih]);
 
   const markerReady = useMemo(() => {
-    return pasars.map(p => ({
-      ...p,
-      nama_pasar: p.nama || p.nama_pasar || "",
-      harga: p.harga || 0,
-    }));
+    const prices = pasars.map(p => Number(p.harga)).filter(v => v > 0);
+    const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+    return pasars.map(p => {
+      const harga = Number(p.harga) || 0;
+      let kategori = 'Rata-rata';
+      if (harga > 0) {
+        if (harga > avg * 1.05) kategori = 'Di Atas Rata-rata';
+        else if (harga < avg * 0.95) kategori = 'Di Bawah Rata-rata';
+      }
+      return { ...p, nama_pasar: p.nama || p.nama_pasar || "", harga, kategori };
+    });
   }, [pasars]);
 
   const hargaMinMax = useMemo(() => {

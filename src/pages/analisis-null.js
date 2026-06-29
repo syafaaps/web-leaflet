@@ -33,8 +33,8 @@ export default function AnalisisNull() {
       setTimelineData({
         labels,
         datasets: [
-          { type: "bar", label: "% NULL", data: data.map(d => d.null_pct), backgroundColor: data.map(d => d.null_pct > 8 ? "rgba(220,38,38,.3)" : d.null_pct > 6 ? "rgba(234,88,12,.3)" : "rgba(45,59,222,.2)"), borderColor: data.map(d => d.null_pct > 8 ? "#dc2626" : d.null_pct > 6 ? "#ea580c" : "#2d3bde"), borderWidth: 1.5, borderRadius: 4, order: 2 },
-          { type: "line", label: "Stability Index", data: data.map(d => d.stability), borderColor: "#2d3bde", borderWidth: 2, pointRadius: 3, pointBackgroundColor: "#2d3bde", fill: false, tension: .4, yAxisID: "y1", order: 1 },
+          { type: "bar", label: "% NULL", data: data.map(d => d.null_pct), backgroundColor: data.map(d => d.null_pct > 8 ? "rgba(220,38,38,.3)" : d.null_pct > 6 ? "rgba(234,88,12,.3)" : "rgba(21,82,51,.2)"), borderColor: data.map(d => d.null_pct > 8 ? "#dc2626" : d.null_pct > 6 ? "#ea580c" : "#155233"), borderWidth: 1.5, borderRadius: 4, order: 2 },
+          { type: "line", label: "Stability Index", data: data.map(d => d.stability), borderColor: "#155233", borderWidth: 2, pointRadius: 3, pointBackgroundColor: "#155233", fill: false, tension: .4, yAxisID: "y1", order: 1 },
         ]
       });
     } catch (e) { console.error(e); }
@@ -97,13 +97,13 @@ export default function AnalisisNull() {
     <GeoAgriLayout title="Analisis NULL">
       <Head><title>Analisis NULL — GeoAgri</title></Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.6px", color: "var(--text)" }}>Analisis Integritas Data</h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>Audit kualitas data hasil scraping harian dari berbagai pasar komoditas.</p>
+      <div className="page-header">
+        <h1 className="page-title">Analisis Integritas Data</h1>
+        <p className="page-desc">Audit kualitas data hasil scraping harian dari berbagai pasar komoditas.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
-        <StatCard label="Overall Completion" value={stats.completion_rate ? `${stats.completion_rate}%` : "—"} color="#2d3bde" sub={<span style={{ color: "var(--text-muted)" }}>{stats.completion_rate >= 80 ? "Baik" : "Perlu perhatian"}</span>} />
+        <StatCard label="Overall Completion" value={stats.completion_rate ? `${stats.completion_rate}%` : "—"} sub={<span style={{ color: "var(--text-muted)" }}>{stats.completion_rate >= 80 ? "Baik" : "Perlu perhatian"}</span>} />
         <StatCard label="Total Missing Values" value={stats.total_null?.toLocaleString() || "—"} color="#dc2626" sub={<span style={{ color: "var(--text-muted)" }}>dari {stats.total_records?.toLocaleString()} total records</span>} />
         <StatCard label="Scraping Stability" value={stats.stability_label || "—"} color="#16a34a" sub={<span style={{ color: "var(--text-muted)" }}>{stats.stability_desc}</span>} />
         <StatCard label="Waktu Terakhir Scan" value={stats.last_scan_time || "—"} color="#6b7280" sub={<span style={{ color: "var(--text-muted)" }}>Data terakhir tersedia</span>} />
@@ -154,7 +154,7 @@ export default function AnalisisNull() {
         </Panel>
 
         <Panel title="Missing Data Batches">
-          <table className="null-table">
+          <table className="geo-table">
             <thead>
               <tr>
                 <th>Nama Sumber</th>
@@ -169,21 +169,13 @@ export default function AnalisisNull() {
                 <tr key={i}>
                   <td><strong>{item.nama}</strong></td>
                   <td style={{ color: "var(--text-muted)" }}>{item.tgl}</td>
-                  <td><span className="null-count">{item.null.toLocaleString()}</span> <span className="null-record">Records</span></td>
+                  <td><span className="geo-mono" style={{ fontWeight: 700, color: "#dc2626" }}>{item.null.toLocaleString()}</span> <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Records</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Panel>
       </div>
-
-      <style jsx global>{`
-        .null-table { width: 100%; border-collapse: collapse; }
-        .null-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); text-align: left; padding: 0 0 12px; border-bottom: 1px solid var(--border); }
-        .null-table td { padding: 12px 0; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--bg-muted); }
-        .null-count { font-weight: 700; font-family: var(--mono); color: #dc2626; }
-        .null-record { font-size: 11px; color: var(--text-muted); }
-      `}</style>
     </GeoAgriLayout>
   );
 }

@@ -89,7 +89,7 @@ export default function LandingPage() {
         </section>
 
         <footer className="landing-footer">
-          Dibangun oleh Tim GeoAgri © 2024
+          {/* Dibangun oleh Tim GeoAgri © 2024 */}
         </footer>
       </div>
 
@@ -106,14 +106,14 @@ export default function LandingPage() {
         }
         .landing-logo {
           display: flex; align-items: center; gap: 8px;
-          font-size: 18px; font-weight: 800; color: #2d3bde; letter-spacing: -.3px;
+          font-size: 18px; font-weight: 800; color: #155233; letter-spacing: -.3px;
         }
         .landing-nav { display: flex; gap: 24px; }
         .landing-nav-link {
           font-size: 13px; font-weight: 600; color: #6b7280;
           text-decoration: none; transition: color .15s;
         }
-        .landing-nav-link:hover { color: #2d3bde; }
+        .landing-nav-link:hover { color: #155233; }
 
         .landing-hero {
           text-align: center; padding: 64px 40px 40px;
@@ -139,7 +139,7 @@ export default function LandingPage() {
         .landing-card:hover {
           transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.1);
         }
-        .landing-card-primary { border-top: 3px solid #2d3bde; }
+        .landing-card-primary { border-top: 3px solid #155233; }
         .landing-card-secondary { border-top: 3px solid #7c3aed; }
         .landing-card-tertiary { border-top: 3px solid #16a34a; cursor: default; }
         .landing-card-icon { font-size: 32px; margin-bottom: 12px; }
@@ -147,7 +147,7 @@ export default function LandingPage() {
         .landing-card-desc { font-size: 13px; color: #6b7280; line-height: 1.5; flex: 1; }
         .landing-card-btn {
           display: inline-flex; align-items: center; gap: 4px;
-          margin-top: 16px; font-size: 13px; font-weight: 700; color: #2d3bde;
+          margin-top: 16px; font-size: 13px; font-weight: 700; color: #155233;
           transition: gap .15s;
         }
         .landing-card:hover .landing-card-btn { gap: 8px; }

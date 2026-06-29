@@ -33,9 +33,9 @@ export default function AnalisisPasar() {
     <GeoAgriLayout title="Analisis Pasar">
       <Head><title>Analisis Pasar ï¿½ GeoAgri</title></Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.6px", color: "var(--text)" }}>Analisis Pasar</h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>Kualitas dan statistik data harga per pasar komoditas.</p>
+      <div className="page-header">
+        <h1 className="page-title">Analisis Pasar</h1>
+        <p className="page-desc">Kualitas dan statistik data harga per pasar komoditas.</p>
       </div>
 
       <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
@@ -64,15 +64,15 @@ export default function AnalisisPasar() {
                 <tr><td colSpan="6" style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>Tidak ada data</td></tr>
               ) : pageData.map((item, i) => {
                 const pct = item.null_pct || 0;
-                const badgeClass = pct > 15 ? "null-high" : pct > 8 ? "null-medium" : pct > 5 ? "null-low" : "";
+                const badgeClass = pct > 15 ? "geo-badge-red" : pct > 8 ? "geo-badge-orange" : pct > 5 ? "geo-badge-green" : "";
                 return (
                   <tr key={i}>
                     <td><strong>{item.nama}</strong></td>
-                    <td style={{ color: "var(--text-muted)" }}>{item.provinsi || "ï¿½"}</td>
-                    <td className="geo-mono">{item.total_records?.toLocaleString() || "ï¿½"}</td>
-                    <td className="geo-mono">{item.null_records?.toLocaleString() || "ï¿½"}</td>
-                    <td><span className={`null-badge ${badgeClass}`}>{pct}%</span></td>
-                    <td className="geo-mono">{item.avg_harga ? "Rp " + Number(item.avg_harga).toLocaleString() : "ï¿½"}</td>
+                    <td style={{ color: "var(--text-muted)" }}>{item.provinsi || "—"}</td>
+                    <td className="geo-mono">{item.total_records?.toLocaleString() || "—"}</td>
+                    <td className="geo-mono">{item.null_records?.toLocaleString() || "—"}</td>
+                    <td><span className={`geo-badge ${badgeClass}`}>{pct}%</span></td>
+                    <td className="geo-mono">{item.avg_harga ? "Rp " + Number(item.avg_harga).toLocaleString() : "—"}</td>
                   </tr>
                 );
               })}
@@ -81,26 +81,14 @@ export default function AnalisisPasar() {
         </div>
         {data.length > perPage && (
           <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 16, alignItems: "center" }}>
-            <button className="geo-page-btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>ï¿½</button>
+            <button className="geo-page-btn" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>{"\u2039"}</button>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Halaman {page} dari {Math.ceil(data.length / perPage)}</span>
-            <button className="geo-page-btn" disabled={page >= Math.ceil(data.length / perPage)} onClick={() => setPage(p => p + 1)}>ï¿½</button>
+            <button className="geo-page-btn" disabled={page >= Math.ceil(data.length / perPage)} onClick={() => setPage(p => p + 1)}>{"\u203A"}</button>
           </div>
         )}
       </Panel>
 
-      <style jsx global>{`
-        .geo-table { width: 100%; border-collapse: collapse; }
-        .geo-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); text-align: left; padding: 0 0 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-        .geo-table td { padding: 12px 0; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--bg-muted); vertical-align: middle; }
-        .geo-mono { font-family: var(--mono); font-weight: 600; }
-        .null-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; font-family: var(--mono); padding: 2px 8px; border-radius: 20px; }
-        .null-badge.null-high { background: rgba(220,38,38,.1); color: #dc2626; }
-        .null-badge.null-medium { background: rgba(234,88,12,.1); color: #ea580c; }
-        .null-badge.null-low { background: rgba(22,163,74,.1); color: #16a34a; }
-        .geo-page-btn { width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-white); font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .geo-page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
-        .geo-page-btn:disabled { opacity: .35; cursor: default; }
-      `}</style>
+
     </GeoAgriLayout>
   );
 }

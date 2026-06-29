@@ -8,25 +8,9 @@
   height: 100vh;
   position: relative;
   z-index: 50;
+  box-shadow: 2px 0 12px rgba(13,31,22,.04);
 }
-.brand {
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--sidebar-border);
-}
-.brandName {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--primary);
-  letter-spacing: -0.4px;
-}
-.brandSub {
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-light);
-  margin-top: 1px;
-}
+
 .nav {
   flex: 1;
   padding: 12px 10px;
@@ -102,7 +86,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  background: linear-gradient(135deg, #155233, #1e7a52);
   display: flex;
   align-items: center;
   justify-content: center;

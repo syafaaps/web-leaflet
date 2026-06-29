@@ -2,14 +2,16 @@
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
-import Badge from "@components/UI/Badge";
+import StatCard from "@components/UI/StatCard";
+import FilterBar from "@components/UI/FilterBar";
+import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
 const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 
 const api = (url) => fetch(url).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
 const fmtShort = (n) => n != null ? "Rp" + (n / 1000).toFixed(0) + "k" : "—";
-const colors = ["#2d3bde", "#16a34a", "#ea580c", "#7c3aed", "#0891b2", "#d97706", "#be185d", "#65a30d"];
+const colors = ["#155233", "#3aab74", "#16a34a", "#ea580c", "#7c3aed", "#0891b2", "#d97706", "#be185d"];
 
 export default function AnalisisHarga() {
   const [view, setView] = useState("tren");
@@ -56,7 +58,7 @@ export default function AnalisisHarga() {
         datasets: [{
           label: `Harga ${satuan}`,
           data: values,
-          borderColor: "#2d3bde",
+          borderColor: "#155233",
           backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 250); g.addColorStop(0, "rgba(45,59,222,.25)"); g.addColorStop(1, "rgba(45,59,222,0)"); return g; },
           fill: true, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 6, tension: .4,
         }]
@@ -133,51 +135,45 @@ export default function AnalisisHarga() {
     <GeoAgriLayout title="Analisis Harga">
       <Head><title>Analisis Harga — GeoAgri</title></Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.6px", color: "var(--text)" }}>Analisis Harga Komoditas</h1>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>Pantau pergerakan, bandingkan, dan analisis distribusi harga.</p>
+      <div className="page-header">
+        <h1 className="page-title">Analisis Harga Komoditas</h1>
+        <p className="page-desc">Pantau pergerakan, bandingkan, dan analisis distribusi harga.</p>
       </div>
 
-      <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <FilterBar>
         {[
           { key: "tren", label: "Tren Harga", icon: "\u2197\uFE0F" },
           { key: "perbandingan", label: "Perbandingan", icon: "\u2696\uFE0F" },
           { key: "heatmap", label: "Heatmap", icon: "\uD83D\uDD25" },
         ].map(v => (
           <button key={v.key} onClick={() => setView(v.key)}
-            style={{ padding: "8px 18px", borderRadius: "var(--radius-sm)", border: `1px solid ${view === v.key ? "var(--primary-20)" : "var(--border)"}`, background: view === v.key ? "var(--primary-10)" : "var(--bg-white)", color: view === v.key ? "var(--primary)" : "var(--text-muted)", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "var(--font)" }}>
+            className={`geo-range-btn ${view === v.key ? "active" : ""}`}>
             {v.icon} {v.label}
           </button>
         ))}
-        <select value={selectedId || ""} onChange={e => setSelectedId(e.target.value)}
-          style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "7px 32px 7px 12px", borderRadius: "var(--radius-sm)", fontFamily: "var(--font)", fontSize: 13, fontWeight: 500, cursor: "pointer", appearance: "none",
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
-            backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}>
+        <select value={selectedId || ""} onChange={e => setSelectedId(e.target.value)} className="geo-select">
           {komoditas.map(k => <option key={k.id} value={k.id}>{k.nama} ({k.satuan || "—"})</option>)}
         </select>
-        <select value={provA} onChange={e => setProvA(e.target.value)}
-          style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "7px 12px", borderRadius: "var(--radius-sm)", fontFamily: "var(--font)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+        <select value={provA} onChange={e => setProvA(e.target.value)} className="filter-select" style={{ minWidth: 130 }}>
           <option value="">Provinsi A</option>
           {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
         </select>
-        <select value={provB} onChange={e => setProvB(e.target.value)}
-          style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", padding: "7px 12px", borderRadius: "var(--radius-sm)", fontFamily: "var(--font)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+        <select value={provB} onChange={e => setProvB(e.target.value)} className="filter-select" style={{ minWidth: 130 }}>
           <option value="">Provinsi B</option>
           {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
         </select>
-        <button onClick={() => { loadTren(); loadPerProvinsi(); }}
-          style={{ padding: "7px 14px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-white)", color: "var(--text)", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "var(--font)" }}>
+        <button onClick={() => { loadTren(); loadPerProvinsi(); }} className="geo-btn-primary">
           Refresh
         </button>
-      </div>
+      </FilterBar>
 
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
-          <SummaryCard label="Harga Rata-rata" value={fmt(stats.rata)} sub={avgPrice > 0 ? "Nasional" : ""} />
-          <SummaryCard label="Harga Terendah" value={fmt(stats.min)} sub={sortedRanking.length ? sortedRanking[0]?.provinsi : ""} />
-          <SummaryCard label="Harga Tertinggi" value={fmt(stats.max)} sub={sortedRanking.length ? sortedRanking[sortedRanking.length - 1]?.provinsi : ""} />
-          <SummaryCard label="Volatilitas" value={volatility ? volatility.cv.toFixed(1) + "%" : "—"} sub={volatility ? `\u03C3 = ${Math.round(volatility.std)}` : ""} />
-          <SummaryCard label="Tren 7 Hari" value={tren7 ? `${tren7 > 0 ? "+" : ""}${tren7}%` : "—"} sub={tren7 > 0 ? "Naik" : tren7 < 0 ? "Turun" : "Stabil"} color={tren7 > 0 ? "#dc2626" : tren7 < 0 ? "#16a34a" : "var(--text-muted)"} />
+          <StatCard label="Harga Rata-rata" value={fmt(stats.rata)} sub="Nasional" />
+          <StatCard label="Harga Terendah" value={fmt(stats.min)} sub={sortedRanking.length ? sortedRanking[0]?.provinsi : ""} />
+          <StatCard label="Harga Tertinggi" value={fmt(stats.max)} sub={sortedRanking.length ? sortedRanking[sortedRanking.length - 1]?.provinsi : ""} />
+          <StatCard label="Volatilitas" value={volatility ? volatility.cv.toFixed(1) + "%" : "—"} sub={volatility ? `\u03C3 = ${Math.round(volatility.std)}` : ""} />
+          <StatCard label="Tren 7 Hari" value={tren7 ? `${tren7 > 0 ? "+" : ""}${tren7}%` : "—"} sub={tren7 > 0 ? "Naik" : tren7 < 0 ? "Turun" : "Stabil"} color={tren7 > 0 ? "#dc2626" : tren7 < 0 ? "#16a34a" : "var(--text-muted)"} />
         </div>
       )}
 
@@ -185,11 +181,11 @@ export default function AnalisisHarga() {
         <>
           <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
             {[7, 14, 30, 90].map(r => (
-              <button key={r} className={`range-btn ${range === r ? "active" : ""}`} onClick={() => setRange(r)}>{r} Hari</button>
+              <button key={r} className={`geo-range-btn ${range === r ? "active" : ""}`} onClick={() => setRange(r)}>{r} Hari</button>
             ))}
           </div>
 
-          <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: "var(--radius-sm)", background: "var(--primary-5)", border: "1px solid var(--primary-20)", fontSize: 13, color: "var(--text)", lineHeight: 1.6 }}>
+          <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: "var(--radius-sm)", background: "rgba(21,82,51,.06)", border: "1px solid var(--primary-20)", fontSize: 13, color: "var(--text)", lineHeight: 1.6 }}>
             {provData.length > 0 && stats ? (
               <>
                 Rata-rata harga nasional <strong>{fmt(stats.rata)}</strong> dengan harga terendah di <strong>{sortedRanking[0]?.provinsi}</strong> ({fmt(stats.min)}) dan tertinggi di <strong>{sortedRanking[sortedRanking.length - 1]?.provinsi}</strong> ({fmt(stats.max)}).
@@ -260,6 +256,17 @@ export default function AnalisisHarga() {
                 <Chart type="bar" data={barChartData} options={barOptions} />
               </div>
             )}
+          </div>
+
+          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Tren Harga (Grafana)</div>
+            <GrafanaEmbed
+              panelId="panel-2"
+              komoditasIds={selectedId ? [selectedId] : []}
+              provinsiIds={[provA, provB].filter(Boolean)}
+              range={range}
+              tab="analisis-tren-harga-komoditas"
+            />
           </div>
         </>
       )}
@@ -378,21 +385,6 @@ export default function AnalisisHarga() {
         </div>
       )}
 
-      <style jsx global>{`
-        .range-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
-        .range-btn.active, .range-btn:hover { background: var(--primary-10); color: var(--primary); border-color: var(--primary-20); }
-        .geo-card { background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
-      `}</style>
     </GeoAgriLayout>
-  );
-}
-
-function SummaryCard({ label, value, sub, color }) {
-  return (
-    <div className="geo-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)", color: color || "var(--text)", letterSpacing: "-.5px" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{sub || ""}</div>
-    </div>
   );
 }
