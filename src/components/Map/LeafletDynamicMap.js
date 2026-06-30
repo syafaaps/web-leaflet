@@ -130,6 +130,20 @@ function buildPopupHTML(item) {
   const harga = fmtHarga(item.harga);
   const sub = [item.kabupaten, item.provinsi].filter(Boolean).join(', ');
   const records = item.total_records || item.total_data || 0;
+  
+  const rata = item.rata_prov ? `Rp ${Number(item.rata_prov).toLocaleString('id-ID')}` : '-';
+  const pct = Number(item.persen_deviasi ?? 0);
+  const pctStr = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+  
+  let pctColor = '#f97316';
+  if (item.kategori === 'Di Atas Rata-rata') pctColor = '#ef4444';
+  if (item.kategori === 'Di Bawah Rata-rata') pctColor = '#22c55e';
+  
+  const tgl = item.tanggal
+    ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '-';
+
+  const { fill, stroke, emoji } = getConfig(item.kategori);
   return `
     <div style="font-family:'DM Sans',system-ui,sans-serif;min-width:210px;max-width:250px;">
       <div style="background:${fill};padding:10px 13px 8px;border-radius:9px 9px 0 0;">
