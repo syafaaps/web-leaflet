@@ -2,6 +2,7 @@
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
+import Select from "react-select";
 
 const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
 const LeafletMapDynamic = dynamic(() => import("@components/Map/LeafletDynamicMap"), { ssr: false });
@@ -17,12 +18,12 @@ export default function PetaPasar() {
   const [komoditas, setKomoditas] = useState([]);
   const [provinsiList, setProvinsiList] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [provinsiId, setProvinsiId] = useState("");
+  const [provinsiIds, setProvinsiIds] = useState([]);
   const [tanggal, setTanggal] = useState(() => new Date(Date.now() - 86400000).toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
-  const [kabkotaList, setKabkotaList] = useState([]);
-  const [kabkotaId, setKabkotaId] = useState("");
+  const [kabkotaOptions, setKabkotaOptions] = useState([]);
+  const [kabkotaOption, setKabkotaOption] = useState(null);
 
   const fetchMaster = useCallback(async () => {
     const [kRes, pRes] = await Promise.all([
@@ -35,27 +36,31 @@ export default function PetaPasar() {
     if (items.length) setSelectedId(String(items[0].id));
   }, []);
 
-  const fetchKabkota = useCallback(async (provId) => {
-    if (!provId) { setKabkotaList([]); setKabkotaId(""); return; }
+  const fetchKabkota = useCallback(async (ids) => {
+    const provId = ids?.[0];
+    if (!provId) { setKabkotaOptions([]); setKabkotaOption(null); return; }
     const res = await api(`/api/master/kabkota?provinsi_id=${provId}`);
-    if (res.status === "success") setKabkotaList(res.data ?? []);
-    setKabkotaId("");
+    setKabkotaOptions((res.data ?? []).map(k => ({ value: String(k.id), label: k.nama })));
+    setKabkotaOption(null);
   }, []);
 
-  useEffect(() => { fetchKabkota(provinsiId); }, [provinsiId, fetchKabkota]);
+  useEffect(() => { fetchKabkota(provinsiIds); }, [provinsiIds, fetchKabkota]);
 
   const fetchData = useCallback(async () => {
     if (!selectedId) return;
     setLoading(true);
     try {
+      const provinsiParam = provinsiIds.length
+        ? '&' + provinsiIds.map(id => `provinsi_ids[]=${id}`).join('&')
+        : '';
+
       if (layer === "choropleth") {
-        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${level}`);
+        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${level}${provinsiParam}`);
         setGeoData(res);
         setPasars([]);
       } else if (layer === "markers") {
-        const pId = provinsiId || undefined;
-        const kId = kabkotaId || undefined;
-        const res = await api(`/api/komoditas/pasar-map?komoditas_id=${selectedId}&tanggal=${tanggal}${pId ? `&provinsi_id=${pId}` : ""}${kId ? `&kabkota_id=${kId}` : ""}`);
+        const kId = kabkotaOption?.value;
+        const res = await api(`/api/komoditas/pasar-map?komoditas_id=${selectedId}&tanggal=${tanggal}${provinsiParam}${kId ? `&kabkota_id=${kId}` : ""}`);
         const features = (res.features || []).map(f => ({
           ...f.properties,
           latitude: f.geometry?.coordinates?.[1],
@@ -64,11 +69,11 @@ export default function PetaPasar() {
         setPasars(features);
         setGeoData(null);
       }
-      const pp = await api(`/api/komoditas/per-provinsi?komoditas_id=${selectedId}&tanggal=${tanggal}`);
+      const pp = await api(`/api/komoditas/per-provinsi?komoditas_id=${selectedId}&tanggal=${tanggal}${provinsiParam}`);
       if (pp.status === "success") setStats(pp);
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [selectedId, layer, level, tanggal, provinsiId, kabkotaId]);
+  }, [selectedId, layer, level, tanggal, provinsiIds, kabkotaOption]);
 
   useEffect(() => { fetchMaster(); }, [fetchMaster]);
   useEffect(() => { if (selectedId) fetchData(); }, [fetchData]);
@@ -146,14 +151,29 @@ export default function PetaPasar() {
         <select value={selectedId || ""} onChange={e => setSelectedId(e.target.value)} className="filter-select">
           {komoditas.map(k => <option key={k.id} value={k.id}>{k.nama} ({k.satuan || "—"})</option>)}
         </select>
-        <select value={provinsiId} onChange={e => setProvinsiId(e.target.value)} className="filter-select">
-          <option value="">Semua Provinsi</option>
+        <select multiple value={provinsiIds}
+          onChange={e => {
+            const vals = Array.from(e.target.selectedOptions, opt => opt.value);
+            setProvinsiIds(vals);
+          }}
+          className="filter-select filter-select-multi">
           {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
         </select>
-        <select value={kabkotaId} onChange={e => setKabkotaId(e.target.value)} className="filter-select" disabled={!provinsiId}>
-          <option value="">Semua Kab/Kota</option>
-          {kabkotaList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-        </select>
+        <Select
+          name="kabkota"
+          options={kabkotaOptions}
+          value={kabkotaOption}
+          onChange={setKabkotaOption}
+          placeholder="Cari Kab/Kota..."
+          isDisabled={!provinsiIds.length}
+          isClearable
+          className="react-select"
+          classNamePrefix="rs"
+          styles={{
+            control: (base) => ({ ...base, minHeight: 36, fontSize: 13 }),
+            menu: (base) => ({ ...base, zIndex: 999 }),
+          }}
+        />
         <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} className="filter-date-input" />
         <button onClick={fetchData} className="filter-btn">Terapkan</button>
       </div>
@@ -233,6 +253,34 @@ export default function PetaPasar() {
       <style jsx global>{`
         @keyframes mapSpin { to { transform: rotate(360deg); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .react-select .rs__control {
+          border-color: var(--border);
+          background: var(--bg);
+          font-family: var(--font);
+          min-width: 180px;
+          min-height: 36px;
+          font-size: 13px;
+          border-radius: var(--radius-sm);
+          box-shadow: none;
+        }
+        .react-select .rs__control:hover { border-color: var(--primary-20); }
+        .react-select .rs__control--is-focused {
+          border-color: var(--primary) !important;
+          box-shadow: 0 0 0 1px var(--primary-20) !important;
+        }
+        .react-select .rs__menu {
+          font-size: 13px;
+          z-index: 999;
+          font-family: var(--font);
+        }
+        .react-select .rs__option--is-selected { background: var(--primary); }
+        .react-select .rs__option--is-focused { background: var(--primary-10); }
+        .react-select .rs__placeholder { color: var(--text-muted); font-size: 13px; }
+        .react-select .rs__single-value { color: var(--text); }
+        .react-select .rs__clear-indicator { color: var(--text-muted); cursor: pointer; }
+        .react-select .rs__clear-indicator:hover { color: var(--text); }
+        .react-select .rs__dropdown-indicator { color: var(--text-muted); }
+        .filter-select-multi { min-height: 100px; min-width: 180px; }
       `}</style>
     </GeoAgriLayout>
   );
