@@ -30,10 +30,14 @@ function MapLoading() {
 export default function PasarMode({ selectedDate, selectedKoms, selectedKabupaten }) {
   const [pasarData, setPasarData] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   const [selectedPasar, setSelectedPasar] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState('');
-  const [loadingAI, setLoadingAI] = useState(false);
+  const [address, setAddress] = useState('');
+
+  // Kabupaten-level AI
+  const [kabAiAnalysis, setKabAiAnalysis] = useState('');
+  const [kabAiLoading, setKabAiLoading] = useState(false);
+  const [kabAiMeta, setKabAiMeta] = useState(null); // { rataKabupaten, rataProvinsi, rankKabupaten, totalKabupaten }
 
   const [stats, setStats] = useState({
     total: 0,
@@ -100,60 +104,75 @@ export default function PasarMode({ selectedDate, selectedKoms, selectedKabupate
     fetchData();
   }, [fetchData]);
 
-  const getAiAnalysis = async (props) => {
-  try {
-    setLoadingAI(true);
-    setAiAnalysis('');
-
-    const response = await fetch(
-      '/api/analisis-ai-pasar',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify({
-          namaPasar: props.nama_pasar,
-          kabupaten: props.kabupaten,
-          komoditas: props.komoditas_nama,
-          harga: props.harga,
-          tanggal: props.tanggal,
-        }),
+  useEffect(() => {
+    if (selectedPasar && pasarData?.length > 0) {
+      const updated = pasarData.find(item => item.uid === selectedPasar.uid);
+      if (updated) {
+        if (
+          updated.komoditas_nama !== selectedPasar.komoditas_nama ||
+          updated.harga !== selectedPasar.harga ||
+          updated.tanggal !== selectedPasar.tanggal
+        ) {
+          setSelectedPasar(updated);
+        }
+      } else {
+        setSelectedPasar(null);
       }
-    );
+    }
+  }, [pasarData, selectedPasar]);
 
-    const result = await response.json();
+  // Reset selectedPasar when kabupaten changes
+  useEffect(() => {
+    setSelectedPasar(null);
+  }, [selectedKabupaten]);
 
-    console.log('HASIL AI =', result);
+  // Auto-trigger kabupaten AI analysis when kabupaten or komoditas changes
+  useEffect(() => {
+    const kom = selectedKoms?.[0];
+    if (!selectedKabupaten || !kom || !selectedDate) {
+      setKabAiAnalysis('');
+      setKabAiMeta(null);
+      return;
+    }
+    setKabAiLoading(true);
+    setKabAiAnalysis('');
+    setKabAiMeta(null);
 
-    setAiAnalysis(
-      result[0]?.output ||
-      result.output ||
-      result.analisis ||
-      "Tidak ada analisis"
-    );
-    console.log(
-  "AI ANALYSIS SET =",
-  result[0]?.output ||
-  result.output ||
-  result.analisis
-);
+    fetch('/api/analisis-ai-kabupaten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kabupaten: selectedKabupaten,
+        komoditas: kom,
+        tanggal: selectedDate,
+      }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setKabAiAnalysis(data.analisis || 'Tidak ada analisis');
+        setKabAiMeta({
+          rataKabupaten: data.rataKabupaten,
+          rataProvinsi: data.rataProvinsi,
+          rankKabupaten: data.rankKabupaten,
+          totalKabupaten: data.totalKabupaten,
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        setKabAiAnalysis('Gagal memuat analisis.');
+      })
+      .finally(() => setKabAiLoading(false));
+  }, [selectedKabupaten, selectedKoms, selectedDate]);
 
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoadingAI(false);
-  }
-};
+
 
   const filteredPasarData = selectedKabupaten
-  ? pasarData.filter(
+    ? pasarData.filter(
       item => item.kabupaten === selectedKabupaten
     )
-  : pasarData;
+    : pasarData;
 
-console.log("AI STATE =", aiAnalysis);
+
 
   return (
     <div
@@ -166,9 +185,26 @@ console.log("AI STATE =", aiAnalysis);
       <LeafletPasarMap
         pasarData={filteredPasarData}
         selectedPasar={selectedPasar}
+        selectedKabupaten={selectedKabupaten}
         onMarkerClick={(props) => {
           setSelectedPasar(props);
-          getAiAnalysis(props);
+          setAddress('Memuat alamat...');
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${props.latitude}&lon=${props.longitude}`, {
+            headers: {
+              'User-Agent': 'Web-Leaflet-App'
+            }
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data && data.display_name) {
+                setAddress(data.display_name);
+              } else {
+                setAddress(`${props.kabupaten}, Jawa Timur`);
+              }
+            })
+            .catch(() => {
+              setAddress(`${props.kabupaten}, Jawa Timur`);
+            });
         }}
       />
       {loading && (
@@ -272,168 +308,235 @@ console.log("AI STATE =", aiAnalysis);
           </div>
         ))}
       </div>
-      {/* Panel AI */}
-      {selectedPasar && (
-        <div
-          style={{
-            position:'absolute',
-            bottom:14,
-            left:14,
-            zIndex:800,
-            width:'280px',
-            maxHeight:'620px',
-            display:'flex',
-            flexDirection:'column',
-
-            background:'rgba(255,255,255,.97)',
-            backdropFilter:'blur(12px)',
-            borderRadius:'var(--radius-lg)',
-            border:'1px solid var(--c-border)',
-            boxShadow:'var(--shadow-md)',
-          }}
-        >
-
-          {/* Header */}
+      {/* ═══ LEFT COLUMN: Kabupaten panel + (optional) Pasar panel stacked ═══ */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 14,
+          left: 14,
+          zIndex: 800,
+          width: '280px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          maxHeight: 'calc(100% - 110px)',
+          pointerEvents: 'none',
+        }}
+      >
+        {/* ── Panel Info Pasar (muncul di ATAS panel kab saat marker diklik) ── */}
+        {selectedPasar && (
           <div
             style={{
-              padding: '12px 14px',
-              background: 'linear-gradient(135deg,var(--c-mint),white)',
-              borderBottom: '1px solid var(--c-border)',
+              background: 'rgba(255,255,255,.97)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--c-border)',
+              boxShadow: 'var(--shadow-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '260px',
+              overflow: 'hidden',
+              pointerEvents: 'auto',
             }}
           >
-
+            {/* Header pasar */}
             <div
               style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '.07em',
-                textTransform: 'uppercase',
-                color: 'var(--c-muted)',
-                marginBottom: '5px',
+                padding: '12px 14px',
+                background: 'linear-gradient(135deg,var(--c-mint),white)',
+                borderBottom: '1px solid var(--c-border)',
+                flexShrink: 0,
               }}
             >
-              📍 Dipilih
-            </div>
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedPasar(null)}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: 'var(--c-muted)',
+                  lineHeight: 1,
+                  padding: '2px 4px',
+                  zIndex: 10,
+                }}
+                title="Tutup"
+              >
+                ✕
+              </button>
 
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '15px',
-                fontWeight: 700,
-                color: 'var(--c-forest)',
-                lineHeight: 1.2,
-              }}
-            >
-              {selectedPasar.nama_pasar}
-            </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: 'var(--c-forest)',
+                  lineHeight: 1.2,
+                  paddingRight: '20px',
+                }}
+              >
+                {selectedPasar.nama_pasar}
+              </div>
 
-            <div
-              style={{
-                fontSize: '11px',
-                color: 'var(--c-muted)',
-                marginTop: '3px',
-                marginBottom: '8px',
-              }}
-            >
-              {selectedPasar.komoditas_nama} · {selectedPasar.tanggal}
-            </div>
+              {/* Alamat & Google Maps */}
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--c-muted)',
+                  marginTop: '6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '5px',
+                }}
+              >
+                <span style={{ fontWeight: 500, lineHeight: 1.3 }}>📍 {address || `${selectedPasar.kabupaten}, Jawa Timur`}</span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedPasar.latitude},${selectedPasar.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '5px 10px',
+                    background: 'var(--c-jade)',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    width: 'fit-content',
+                    marginTop: '2px',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'background var(--transition)',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--c-forest)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--c-jade)'}
+                >
+                  🗺️ Buka di Google Maps
+                </a>
+              </div>
 
-            <div
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: 'var(--c-ink)',
-                letterSpacing: '-0.5px',
-              }}
-            >
-              Rp {Number(selectedPasar.harga).toLocaleString('id-ID')}
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--c-muted)',
+                  marginTop: '8px',
+                  marginBottom: '4px',
+                }}
+              >
+                {selectedPasar.komoditas_nama} · {selectedPasar.tanggal}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 800,
+                  color: 'var(--c-ink)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                Rp {Number(selectedPasar.harga).toLocaleString('id-ID')}
+              </div>
             </div>
 
           </div>
+        )}
 
-          {/* Body */}
-          {loadingAI ? (
-
+        {/* ── Panel AI Kabupaten (selalu tampil saat kabupaten dipilih) ── */}
+        {selectedKabupaten && (
           <div
-          style={{
-          padding:'16px',
-          fontSize:'12px'
-          }}
+            style={{
+              background: 'rgba(255,255,255,.97)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--c-border)',
+              boxShadow: 'var(--shadow-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: selectedPasar ? '340px' : '520px',
+              overflow: 'hidden',
+              pointerEvents: 'auto',
+            }}
           >
+            {/* Header kabupaten */}
+            <div
+              style={{
+                padding: '12px 14px',
+                background: 'linear-gradient(135deg, #e8f5e9, white)',
+                borderBottom: '1px solid var(--c-border)',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--c-muted)', marginBottom: '3px' }}>
+                {kabAiMeta?.rankKabupaten
+                  ? `🏆 Peringkat ${kabAiMeta.rankKabupaten} dari ${kabAiMeta.totalKabupaten}`
+                  : '📊 Analisis Wilayah'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, color: 'var(--c-forest)', lineHeight: 1.2 }}>
+                {selectedKabupaten}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-muted)', marginTop: '3px' }}>
+                {selectedKoms?.[0]} · {selectedDate}
+              </div>
+              {kabAiMeta && (
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Rata Kab</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-ink)' }}>
+                      Rp {Number(kabAiMeta.rataKabupaten).toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Rata Provinsi</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-forest)' }}>
+                      Rp {Number(kabAiMeta.rataProvinsi).toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          🤖 AI sedang menganalisis...
-
+            {/* Body AI kabupaten */}
+            {kabAiLoading ? (
+              <div style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--c-muted)' }}>
+                🤖 AI sedang menganalisis wilayah...
+              </div>
+            ) : (
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '12px 14px',
+                  fontSize: '12px',
+                  lineHeight: '1.7',
+                  color: '#334155',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: '8px', fontSize: '11px', color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                  🤖 Analisis Wilayah ini
+                </div>
+                <ReactMarkdown
+                  components={{
+                    strong: ({ children }) => (
+                      <strong style={{ fontWeight: 700, color: '#111827' }}>{children}</strong>
+                    ),
+                    p: ({ children }) => (
+                      <p style={{ marginBottom: '10px' }}>{children}</p>
+                    ),
+                  }}
+                >
+                  {kabAiAnalysis}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
-
-          ) : (
-
-          <div
-          style={{
-          flex:1,
-          overflowY:'auto',
-          padding:'14px',
-          fontSize:'12px',
-          lineHeight:'1.7',
-          color:'#334155'
-          }}
-          >
-
-          <div
-          style={{
-          fontWeight:700,
-          marginBottom:'10px'
-          }}
-          >
-
-          🤖 Analisis AI
-
-          </div>
-
-          <ReactMarkdown
-          components={{
-
-          strong:({children})=>(
-
-          <strong
-          style={{
-          fontWeight:700,
-          color:"#111827"
-          }}
-          >
-
-          {children}
-
-          </strong>
-
-          ),
-
-          p:({children})=>(
-
-          <p
-          style={{
-          marginBottom:"12px"
-          }}
-          >
-
-          {children}
-
-          </p>
-
-          )
-
-          }}
-          >
-
-          {aiAnalysis}
-
-          </ReactMarkdown>
-
-          </div>
-
-          )}
-
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Legend */}
       <div

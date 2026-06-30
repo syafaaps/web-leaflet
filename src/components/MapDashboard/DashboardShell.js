@@ -6,8 +6,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
 // ── Daftar mode — tambah entri baru di sini untuk mode baru ─────────────────
-import PasarMode    from './modes/PasarMode';
-import KabkotMode   from './modes/KabkotMode';
+import PasarMode from './modes/PasarMode';
+import KabkotMode from './modes/KabkotMode';
+import { getKomoditasImageUrl } from '../../lib/komoditasImage';
+
 
 export const MODES = [
   {
@@ -24,59 +26,64 @@ export const MODES = [
     desc: 'Choropleth wilayah',
     component: KabkotMode,
   },
-  
+
 ];
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-function todayString() {
-  return new Date().toISOString().slice(0, 10);
+function yesterdayString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // ── Komponen utama ────────────────────────────────────────────────────────────
 export default function DashboardShell() {
-  const [activeMode,       setActiveMode]       = useState('kabkot');
-  const [selectedDate,     setSelectedDate]     = useState('');
-  const [komoditasList,    setKomoditasList]    = useState([]);
-  const [selectedKom,     setSelectedKom]     = useState(''); // multi-select checkbox
-  const [overlayOpen,      setOverlayOpen]      = useState(true);
-  const [overlayMin,       setOverlayMin]       = useState(false); // minimize overlay
+  const [activeMode, setActiveMode] = useState('kabkot');
+  const [selectedDate, setSelectedDate] = useState(yesterdayString());
+  const [komoditasList, setKomoditasList] = useState([]);
+  const [selectedKom, setSelectedKom] = useState(''); // multi-select checkbox
+  const [overlayOpen, setOverlayOpen] = useState(true);
+  const [overlayMin, setOverlayMin] = useState(false); // minimize overlay
   const [selectedKabupaten, setSelectedKabupaten] = useState('');
   const [daftarKabupaten, setDaftarKabupaten] = useState([]);
 
   // Fetch semua komoditas tersedia (dari heatmap, sudah include semua)
   useEffect(() => {
 
-  fetch('/api/komoditas')
-    .then(r => r.json())
-    .then(data => {
+    fetch('/api/komoditas')
+      .then(r => r.json())
+      .then(data => {
 
-      const list =
-        data
-        .map(item => item.komoditas_nama)
-        .filter(Boolean)
-        .sort();
+        const list =
+          data
+            .map(item => item.komoditas_nama)
+            .filter(Boolean)
+            .sort();
 
-      setKomoditasList(list);
+        setKomoditasList(list);
 
-      if (list.length) {
-        setSelectedKom(list[0]);
-      }
+        if (list.length) {
+          setSelectedKom(list[0]);
+        }
 
-    })
-    .catch(console.error);
+      })
+      .catch(console.error);
 
-}, []);
+  }, []);
 
- useEffect(() => {
-  fetch('/api/kabupaten')
-    .then(r => r.json())
-    .then(data => {
-      setDaftarKabupaten(
-        data.map(item => item.kab_nama)
-      );
-    })
-    .catch(console.error);
-}, []);
+  useEffect(() => {
+    fetch('/api/kabupaten')
+      .then(r => r.json())
+      .then(data => {
+        setDaftarKabupaten(
+          data.map(item => item.kab_nama)
+        );
+      })
+      .catch(console.error);
+  }, []);
 
   const ActiveComponent = MODES.find(m => m.id === activeMode)?.component ?? null;
 
@@ -108,7 +115,7 @@ export default function DashboardShell() {
           --font-display: 'Fraunces', serif;
 
           --sidebar-w: 280px;
-          --overlay-w: 240px;
+          --overlay-w: 280px;
           --radius-sm: 6px;
           --radius-md: 10px;
           --radius-lg: 16px;
@@ -217,99 +224,99 @@ export default function DashboardShell() {
               {MODES.map(mode => {
                 const active = activeMode === mode.id;
                 return (
-               <div key={mode.id}>
-                <button
-                  onClick={() => setActiveMode(mode.id)}
-                  style={{
-                    width: '100%', 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '9px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: active
-                      ? '1.5px solid var(--c-jade)'
-                      : '1.5px solid transparent',
-                    background: active
-                      ? 'var(--c-mint)'
-                      : 'var(--c-paper)',
-                    cursor: 'pointer',
-                    transition: 'all var(--transition)',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '16px',
-                      lineHeight: 1,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {mode.icon}
-                  </span>
-
-                  <div>
-                    <div
+                  <div key={mode.id}>
+                    <button
+                      onClick={() => setActiveMode(mode.id)}
                       style={{
-                        fontSize: '13px',
-                        fontWeight: active ? 700 : 500,
-                        color: active
-                          ? 'var(--c-forest)'
-                          : 'var(--c-ink)',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '9px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        border: active
+                          ? '1.5px solid var(--c-jade)'
+                          : '1.5px solid transparent',
+                        background: active
+                          ? 'var(--c-mint)'
+                          : 'var(--c-paper)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition)',
+                        textAlign: 'left',
                       }}
                     >
-                      {mode.label}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: 'var(--c-muted)',
-                      }}
-                    >
-                      {mode.desc}
-                    </div>
-                  </div>
-                </button>
-
-                {activeMode === 'pasar' &&
-                  mode.id === 'pasar' && (
-                    <div
-                      style={{
-                        marginTop: '6px',
-                        marginLeft: '8px',
-                        marginRight: '8px',
-                      }}
-                    >
-                      <select
-                        value={selectedKabupaten}
-                        onChange={(e) =>
-                          setSelectedKabupaten(e.target.value)
-                        }
+                      <span
                         style={{
-                          width: '100%',
-                          padding: '8px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--c-border)',
+                          fontSize: '16px',
+                          lineHeight: 1,
+                          flexShrink: 0,
                         }}
                       >
-                        <option value="">
-                          Semua Kabupaten/Kota
-                        </option>
+                        {mode.icon}
+                      </span>
 
-                        {daftarKabupaten.map((kab) => (
-                          <option key={kab} value={kab}>
-                            {kab}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '13px',
+                            fontWeight: active ? 700 : 500,
+                            color: active
+                              ? 'var(--c-forest)'
+                              : 'var(--c-ink)',
+                          }}
+                        >
+                          {mode.label}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--c-muted)',
+                          }}
+                        >
+                          {mode.desc}
+                        </div>
+                      </div>
+                    </button>
+
+                    {activeMode === 'pasar' &&
+                      mode.id === 'pasar' && (
+                        <div
+                          style={{
+                            marginTop: '6px',
+                            marginLeft: '8px',
+                            marginRight: '8px',
+                          }}
+                        >
+                          <select
+                            value={selectedKabupaten}
+                            onChange={(e) =>
+                              setSelectedKabupaten(e.target.value)
+                            }
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--c-border)',
+                            }}
+                          >
+                            <option value="">
+                              Semua Kabupaten/Kota
+                            </option>
+
+                            {daftarKabupaten.map((kab) => (
+                              <option key={kab} value={kab}>
+                                {kab}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                   </div>
                 );
               })}
-              </div>
-              </div>
+            </div>
+          </div>
           <div style={{ height: '1px', background: 'var(--c-border)', margin: '0 16px' }} />
 
           {/* ── Filter Tanggal (global, tetap ada di semua mode) ── */}
@@ -378,7 +385,7 @@ export default function DashboardShell() {
                 </span>
               </div>
             )}
-            
+
           </div>
         </aside>
 
@@ -390,11 +397,11 @@ export default function DashboardShell() {
           {/* ── Render mode aktif ── */}
           {ActiveComponent && (
             <div className="anim-fade" key={activeMode} style={{ width: '100%', height: '100%' }}>
-             <ActiveComponent
-              selectedDate={selectedDate}
-              selectedKoms={selectedKom ? [selectedKom] : []}
-              selectedKabupaten={selectedKabupaten}
-/>
+              <ActiveComponent
+                selectedDate={selectedDate}
+                selectedKoms={selectedKom ? [selectedKom] : []}
+                selectedKabupaten={selectedKabupaten}
+              />
             </div>
           )}
 
@@ -439,41 +446,67 @@ export default function DashboardShell() {
           }}>
 
             {/* Header overlay */}
+            {(() => {
+              const imgUrl = !overlayMin && selectedKom ? getKomoditasImageUrl(selectedKom) : null;
+              return (
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: overlayMin ? '8px 10px' : '10px 14px',
+              display: 'flex', alignItems: overlayMin ? 'center' : 'flex-end', justifyContent: 'space-between',
+              padding: overlayMin ? '8px 10px' : '14px 14px 12px',
               borderBottom: overlayMin ? 'none' : '1px solid var(--c-border)',
               cursor: 'pointer',
               userSelect: 'none',
               gap: '8px',
+              position: 'relative',
+              ...(imgUrl ? {
+                backgroundImage: `url(${imgUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                minHeight: '90px',
+              } : {
+                background: overlayMin ? 'transparent' : 'linear-gradient(135deg,var(--c-mint),white)',
+              }),
             }}
               onClick={() => setOverlayMin(v => !v)}
             >
+              {imgUrl && (
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(10,30,20,0.85) 0%, rgba(10,30,20,0.2) 65%, transparent 100%)',
+                  pointerEvents: 'none',
+                }} />
+              )}
               {!overlayMin && (
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--c-muted)' }}>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: imgUrl ? 'rgba(255,255,255,.7)' : 'var(--c-muted)' }}>
                     Komoditas
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--c-muted)', marginTop: '1px' }}>
-                    {selectedKom ? 1 : 0} dipilih
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: imgUrl ? 'white' : 'var(--c-forest)', marginTop: '2px', textShadow: imgUrl ? '0 1px 4px rgba(0,0,0,0.5)' : 'none' }}>
+                    {selectedKom ? selectedKom : 'Pilih Komoditas'}
                   </div>
                 </div>
               )}
               {overlayMin && (
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-jade)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-jade)', position: 'relative', zIndex: 1 }}>
                   🌾 🌾 {selectedKom ? 1 : 0} komoditas
                 </span>
               )}
               <button style={{
-                background: 'var(--c-paper)', border: '1px solid var(--c-border)',
+                background: imgUrl ? 'rgba(0,0,0,0.35)' : 'var(--c-paper)', 
+                border: imgUrl ? 'none' : '1px solid var(--c-border)',
+                backdropFilter: imgUrl ? 'blur(4px)' : 'none',
                 borderRadius: '6px', width: '24px', height: '24px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '10px', color: 'var(--c-muted)', flexShrink: 0,
+                fontSize: '10px', color: imgUrl ? 'white' : 'var(--c-muted)', flexShrink: 0,
                 transition: 'all var(--transition)',
+                position: 'relative', zIndex: 1,
+                alignSelf: overlayMin ? 'auto' : 'flex-start',
               }}>
                 {overlayMin ? '◀' : '▶'}
               </button>
             </div>
+            );
+            })()}
             {!overlayMin && (
               <div
                 style={{

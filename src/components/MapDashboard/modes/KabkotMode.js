@@ -44,11 +44,11 @@ function getRanking(features) {
 }
 
 export default function KabkotMode({ selectedDate, selectedKoms }) {
-  const [geojsonData,  setGeojsonData]  = useState(null);
-  const [loading,      setLoading]      = useState(false);
-  const [hoveredKab,   setHoveredKab]   = useState(null);
-  const [selectedKab,  setSelectedKab]  = useState(null);
-  const [rankOpen,     setRankOpen]     = useState(true);
+  const [geojsonData, setGeojsonData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [hoveredKab, setHoveredKab] = useState(null);
+  const [selectedKab, setSelectedKab] = useState(null);
+  const [rankOpen, setRankOpen] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
 
@@ -68,58 +68,78 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
   }, [activeKom, selectedDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (selectedKab && geojsonData?.features) {
+      const updated = geojsonData.features.find(
+        f => f.properties.kabupaten === selectedKab.kabupaten
+      );
+      if (updated) {
+        const upProps = updated.properties;
+        if (
+          upProps.rata_kabupaten !== selectedKab.rata_kabupaten ||
+          upProps.komoditas_nama !== selectedKab.komoditas_nama ||
+          upProps.tanggal !== selectedKab.tanggal
+        ) {
+          setSelectedKab(upProps);
+        }
+      } else {
+        setSelectedKab(null);
+      }
+    }
+  }, [geojsonData, selectedKab]);
   useEffect(() => {
 
-  if (!activeKom) return;
+    if (!activeKom) return;
 
-  getAiAnalysis();
+    getAiAnalysis();
 
   }, [activeKom, selectedDate]);
-const getAiAnalysis = async () => {
+  const getAiAnalysis = async () => {
 
-  try {
+    try {
 
-    setLoadingAI(true);
+      setLoadingAI(true);
 
-    setAiAnalysis('');
+      setAiAnalysis('');
 
-    const response = await fetch(
-      '/api/analisis-ai-provinsi',
-      {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json'
-        },
+      const response = await fetch(
+        '/api/analisis-ai-provinsi',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
 
-        body: JSON.stringify({
-          komoditas: activeKom,
-          tanggal: selectedDate
-        })
-      }
-    );
+          body: JSON.stringify({
+            komoditas: activeKom,
+            tanggal: selectedDate
+          })
+        }
+      );
 
-    const result = await response.json();
+      const result = await response.json();
 
-    console.log(
-      "RESULT DARI API:",
-      JSON.stringify(result,null,2)
-    );
+      console.log(
+        "RESULT DARI API:",
+        JSON.stringify(result, null, 2)
+      );
 
-    setAiAnalysis(
-      result.analisis ||
-      "Tidak ada analisis"
-    );
+      setAiAnalysis(
+        result.analisis ||
+        "Tidak ada analisis"
+      );
 
-  } catch(err){
+    } catch (err) {
 
-    console.error(err);
+      console.error(err);
 
-  } finally {
+    } finally {
 
-    setLoadingAI(false);
+      setLoadingAI(false);
 
-  }
-};
+    }
+  };
 
   const { min, max } = geojsonData?.features
     ? computeRange(geojsonData.features)
@@ -127,9 +147,12 @@ const getAiAnalysis = async () => {
 
   const ranking = geojsonData?.features ? getRanking(geojsonData.features) : [];
   const rataProvinsi =
-  geojsonData?.rata_provinsi || 0;
+    geojsonData?.rata_provinsi || 0;
   console.log("Rata provinsi dari API =", geojsonData?.rata_provinsi);
   const activeInfo = selectedKab || hoveredKab;
+  const activeRank = activeInfo && ranking.length > 0
+    ? ranking.findIndex(f => f.properties.kabupaten === activeInfo.kabupaten) + 1
+    : null;
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -139,9 +162,9 @@ const getAiAnalysis = async () => {
         geojsonData={geojsonData}
         onHover={setHoveredKab}
         onClick={props => {
-        setSelectedKab(props);
-      }}
-        
+          setSelectedKab(props);
+        }}
+
       />
 
       {/* Loading overlay */}
@@ -193,7 +216,7 @@ const getAiAnalysis = async () => {
           {activeInfo ? (
             <>
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--c-muted)', marginBottom: '5px' }}>
-                {selectedKab ? '📍 Dipilih' : '🖱 Hover'}
+                {activeRank ? `🏆 Peringkat ${activeRank}` : '🖱 Hover'}
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, color: 'var(--c-forest)', lineHeight: 1.2, marginBottom: '3px' }}>
                 {activeInfo.kabupaten}
@@ -343,109 +366,109 @@ const getAiAnalysis = async () => {
           </div>
         )}
       </div>
-            {/* Panel AI Provinsi */}
-              <div
-                style={{
-                  position:'absolute',
-                  bottom:14,
-                  right:14,
-                  zIndex:800,
-                  width:'280px',
-                  maxHeight:'620px',
-                  display:'flex',
-                  flexDirection:'column',
+      {/* Panel AI Provinsi */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 14,
+          right: 14,
+          zIndex: 800,
+          width: '280px',
+          maxHeight: '620px',
+          display: 'flex',
+          flexDirection: 'column',
 
-                  background:'rgba(255,255,255,.97)',
-                  backdropFilter:'blur(12px)',
-                  borderRadius:'var(--radius-lg)',
-                  border:'1px solid var(--c-border)',
-                  boxShadow:'var(--shadow-md)'
-                }}
-              >
+          background: 'rgba(255,255,255,.97)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--c-border)',
+          boxShadow: 'var(--shadow-md)'
+        }}
+      >
 
-              <div
-                style={{
-                  padding:'12px 14px',
-                  borderBottom:'1px solid var(--c-border)'
-                }}
-              >
-                <div
-                  style={{
-                    fontSize:'10px',
-                    fontWeight:700,
-                    letterSpacing:'.07em',
-                    textTransform:'uppercase',
-                    color:'var(--c-muted)',
-                    marginBottom:'6px'
-                  }}
-                >
-                  🤖 AI Jawa Timur
-                </div>
+        <div
+          style={{
+            padding: '12px 14px',
+            borderBottom: '1px solid var(--c-border)'
+          }}
+        >
+          <div
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '.07em',
+              textTransform: 'uppercase',
+              color: 'var(--c-muted)',
+              marginBottom: '6px'
+            }}
+          >
+            🤖 AI Jawa Timur
+          </div>
 
-                <div
-                  style={{
-                    fontSize:'11px',
-                    color:'var(--c-muted)'
-                  }}
-                >
-                  {activeKom} · {selectedDate || 'Tanggal terbaru'}
-                </div>
-              </div>
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--c-muted)'
+            }}
+          >
+            {activeKom} · {selectedDate || 'Tanggal terbaru'}
+          </div>
+        </div>
 
-              {loadingAI ? (
+        {loadingAI ? (
 
-              <div
-                style={{
-                  padding: '16px',
-                  fontSize: '12px'
-                }}
-              >
-                AI sedang menganalisis...
-              </div>
+          <div
+            style={{
+              padding: '16px',
+              fontSize: '12px'
+            }}
+          >
+            AI sedang menganalisis...
+          </div>
 
-            ) : (
+        ) : (
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  padding: '14px',
-                  fontSize: '12px',
-                  lineHeight: '1.7',
-                  color: '#334155'
-                }}
-              >
-                <ReactMarkdown
-                  components={{
-                    strong: ({ children }) => (
-                      <strong
-                        style={{
-                          fontWeight: 700,
-                          color: "#111827"
-                        }}
-                      >
-                        {children}
-                      </strong>
-                    ),
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '14px',
+              fontSize: '12px',
+              lineHeight: '1.7',
+              color: '#334155'
+            }}
+          >
+            <ReactMarkdown
+              components={{
+                strong: ({ children }) => (
+                  <strong
+                    style={{
+                      fontWeight: 700,
+                      color: "#111827"
+                    }}
+                  >
+                    {children}
+                  </strong>
+                ),
 
-                    p: ({ children }) => (
-                      <p
-                        style={{
-                          marginBottom: "12px"
-                        }}
-                      >
-                        {children}
-                      </p>
-                    )
-                  }}
-                >
-                  {aiAnalysis}
-                </ReactMarkdown>
-              </div>
+                p: ({ children }) => (
+                  <p
+                    style={{
+                      marginBottom: "12px"
+                    }}
+                  >
+                    {children}
+                  </p>
+                )
+              }}
+            >
+              {aiAnalysis}
+            </ReactMarkdown>
+          </div>
 
-            )}
+        )}
 
-            </div>
+      </div>
     </div>
   );
 }

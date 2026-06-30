@@ -15,20 +15,29 @@ const DEFAULT_CENTER = [-7.5, 112.5];
 function computeStats(data) {
   if (!data.length) return { mahal: 0, sedang: 0, murah: 0, total: 0 };
   return {
-    total:  data.length,
-    mahal:  data.filter(d => d.kategori === 'Mahal').length,
+    total: data.length,
+    mahal: data.filter(d => d.kategori === 'Mahal').length,
     sedang: data.filter(d => d.kategori === 'Sedang').length,
-    murah:  data.filter(d => d.kategori === 'Murah').length,
+    murah: data.filter(d => d.kategori === 'Murah').length,
   };
 }
 
+function yesterdayString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function Home() {
-  const [pasarData,      setPasarData]      = useState([]);
-  const [komoditasList,  setKomoditasList]  = useState([]);
+  const [pasarData, setPasarData] = useState([]);
+  const [komoditasList, setKomoditasList] = useState([]);
   const [selectedKomoditas, setSelectedKomoditas] = useState('');
-  const [selectedDate,   setSelectedDate]   = useState('');
-  const [overlayLahan,   setOverlayLahan]   = useState(false);
-  const [loading,        setLoading]        = useState(false);
+  const [selectedDate, setSelectedDate] = useState(yesterdayString());
+  const [overlayLahan, setOverlayLahan] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Fetch daftar komoditas (sekali)
   // useEffect(() => {
@@ -40,7 +49,7 @@ export default function Home() {
   //     })
   //     .catch(console.error);
   // }, []);
-   useEffect(() => {
+  useEffect(() => {
     fetch('/api/heatmap')
       .then(r => r.json())
       .then(data => {
@@ -69,7 +78,7 @@ export default function Home() {
     setLoading(true);
     const params = new URLSearchParams();
     if (selectedKomoditas) params.set('komoditas', selectedKomoditas);
-    if (selectedDate)      params.set('tanggal', selectedDate);
+    if (selectedDate) params.set('tanggal', selectedDate);
 
     fetch(`/api/pasar?${params}`)
       .then(r => r.json())
@@ -142,9 +151,9 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {[
                   { label: 'Total Pasar', value: stats.total, color: 'var(--green-dark)', bg: 'var(--green-light)' },
-                  { label: 'Mahal',  value: stats.mahal,  color: '#b91c1c', bg: '#fee2e2' },
+                  { label: 'Mahal', value: stats.mahal, color: '#b91c1c', bg: '#fee2e2' },
                   { label: 'Sedang', value: stats.sedang, color: '#c2410c', bg: '#ffedd5' },
-                  { label: 'Murah',  value: stats.murah,  color: '#15803d', bg: '#dcfce7' },
+                  { label: 'Murah', value: stats.murah, color: '#15803d', bg: '#dcfce7' },
                 ].map(c => (
                   <div key={c.label} style={{
                     background: c.bg, border: '1px solid var(--border)',
@@ -186,11 +195,11 @@ export default function Home() {
                     {komoditasList.length === 0
                       ? <option>Memuat...</option>
                       : komoditasList.map((k, i) => (
-                          // <option key={i} value={k.kategori}>{k.kategori}</option>
-                          <option key={i} value={k.komoditas_nama}>
-                              {k.kategori}
-                          </option>
-                        ))
+                        // <option key={i} value={k.kategori}>{k.kategori}</option>
+                        <option key={i} value={k.komoditas_nama}>
+                          {k.kategori}
+                        </option>
+                      ))
                     }
                   </select>
                 </div>
@@ -296,8 +305,8 @@ export default function Home() {
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
                     <svg width="14" height="18" viewBox="0 0 14 18" style={{ flexShrink: 0 }}>
                       <path d="M7 1C3.686 1 1 3.686 1 7C1 11 7 17 7 17C7 17 13 11 13 7C13 3.686 10.314 1 7 1Z"
-                        fill={item.color} stroke={item.color} strokeWidth="0.5"/>
-                      <circle cx="7" cy="6.5" r="2.5" fill="white" opacity="0.9"/>
+                        fill={item.color} stroke={item.color} strokeWidth="0.5" />
+                      <circle cx="7" cy="6.5" r="2.5" fill="white" opacity="0.9" />
                     </svg>
                     <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{item.label}</span>
                   </div>

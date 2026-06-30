@@ -122,7 +122,16 @@ if (item.kategori === 'Di Bawah Rata-rata') {
     <div style="font-family:'DM Sans',system-ui,sans-serif;min-width:210px;max-width:250px;">
       <div style="background:${fill};padding:10px 13px 8px;border-radius:9px 9px 0 0;">
         <div style="font-weight:800;font-size:13px;color:white;margin-bottom:2px;line-height:1.3;">${item.nama_pasar}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.85);">📍 ${item.kabupaten}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.85);margin-bottom:6px;">📍 ${item.kabupaten}, Jawa Timur</div>
+        <a href="https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:6px;font-size:10.5px;font-weight:700;text-decoration:none;transition:background 0.2s;"
+           onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+           onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+        >
+          🗺️ Petunjuk Arah
+        </a>
       </div>
       <div style="padding:10px 13px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 9px 9px;background:#fff;">
         <div style="font-size:10.5px;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">
@@ -156,6 +165,7 @@ if (item.kategori === 'Di Bawah Rata-rata') {
     function PasarMarkerLayer({
       pasarData,
       selectedPasar,
+      selectedKabupaten,
       onMarkerClick
     }) {
 
@@ -164,6 +174,24 @@ if (item.kategori === 'Di Bawah Rata-rata') {
       const layerRef = useRef(null);
 
       const selectedMarkerRef = useRef(null);
+      const prevKabRef = useRef(selectedKabupaten);
+
+      useEffect(() => {
+        if (prevKabRef.current !== selectedKabupaten) {
+          prevKabRef.current = selectedKabupaten;
+          if (selectedKabupaten && pasarData && pasarData.length > 0) {
+            const coords = pasarData
+              .map(item => [Number(item.latitude), Number(item.longitude)])
+              .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
+            if (coords.length > 0) {
+              const bounds = L.latLngBounds(coords);
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+            }
+          } else if (!selectedKabupaten) {
+            map.setView([-7.5, 112.5], 8);
+          }
+        }
+      }, [selectedKabupaten, pasarData, map]);
 
   useEffect(() => {
     if (!layerRef.current) {
@@ -244,6 +272,7 @@ marker.on("click", () => {
     className,
     pasarData = [],
     selectedPasar,
+    selectedKabupaten,
     onMarkerClick
   }) => {
   const mapClassName = [styles.map, className].filter(Boolean).join(' ');
@@ -276,6 +305,8 @@ marker.on("click", () => {
 
         <PasarMarkerLayer
         pasarData={pasarData}
+        selectedPasar={selectedPasar}
+        selectedKabupaten={selectedKabupaten}
         onMarkerClick={onMarkerClick}
       />
       </MapContainer>
