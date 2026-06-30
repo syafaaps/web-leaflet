@@ -1,4 +1,4 @@
-// pages/heatmap.js
+﻿// pages/heatmap.js
 import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -31,67 +31,58 @@ function getRanking(features) {
     .sort((a, b) => b.properties.rata_kabupaten - a.properties.rata_kabupaten);
 }
 
-function yesterdayString() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 export default function HeatmapPage() {
-  const [geojsonData, setGeojsonData] = useState(null);
-  const [komoditasList, setKomoditasList] = useState([]);
-  const [selectedKom, setSelectedKom] = useState('');
-  const [selectedDate, setSelectedDate] = useState(yesterdayString());
-  const [loading, setLoading] = useState(false);
-  const [hoveredKab, setHoveredKab] = useState(null);
-  const [selectedKab, setSelectedKab] = useState(null);
-  const [showRanking, setShowRanking] = useState(false);
+  const [geojsonData,     setGeojsonData]     = useState(null);
+  const [komoditasList,   setKomoditasList]   = useState([]);
+  const [selectedKom,     setSelectedKom]     = useState('');
+  const [selectedDate,    setSelectedDate]    = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [hoveredKab,      setHoveredKab]      = useState(null);
+  const [selectedKab,     setSelectedKab]     = useState(null);
+  const [showRanking,     setShowRanking]     = useState(false);
 
   // Fetch komoditas
-  //   useEffect(() => {
-  //     fetch('/api/kategori-komoditas')
-  //       .then(r => r.json())
-  //       .then(data => {
-  //         setKomoditasList(data);
-  //         if (data.length) setSelectedKom(data[0].kategori);
-  //       })
-  //       .catch(console.error);
-  //   }, []);
-  //   useEffect(() => {
-  //     fetch('/api/heatmap')
-  //       .then(r => r.json())
-  //       .then(data => {
-  //         setKomoditasList(data);
-  //         if (data.length) setSelectedKom(data[0].komoditas_nama);
-  //       })
-  //       .catch(console.error);
-  //   }, []);
+//   useEffect(() => {
+//     fetch('/api/kategori-komoditas')
+//       .then(r => r.json())
+//       .then(data => {
+//         setKomoditasList(data);
+//         if (data.length) setSelectedKom(data[0].kategori);
+//       })
+//       .catch(console.error);
+//   }, []);
+//   useEffect(() => {
+//     fetch('/api/heatmap')
+//       .then(r => r.json())
+//       .then(data => {
+//         setKomoditasList(data);
+//         if (data.length) setSelectedKom(data[0].komoditas_nama);
+//       })
+//       .catch(console.error);
+//   }, []);
   useEffect(() => {
-    fetch('/api/komoditas')
-      .then(r => r.json())
-      .then(data => {
-        const komoditas = [
-          ...new Set(
-            (data.features || []).map(f => f.properties.komoditas_nama)
-          )
-        ].filter(Boolean);
+  fetch('/api/komoditas')
+    .then(r => r.json())
+    .then(data => {
+      const komoditas = [
+        ...new Set(
+          (data.features || []).map(f => f.properties.komoditas_nama)
+        )
+      ].filter(Boolean);
 
-        const formatted = komoditas.map(k => ({
-          komoditas_nama: k,
-          kategori: k // biar UI kamu tetap pakai label lama
-        }));
+      const formatted = komoditas.map(k => ({
+        komoditas_nama: k,
+        kategori: k // biar UI kamu tetap pakai label lama
+      }));
 
-        setKomoditasList(formatted);
+      setKomoditasList(formatted);
 
-        if (formatted.length) {
-          setSelectedKom(formatted[0].komoditas_nama);
-        }
-      })
-      .catch(console.error);
-  }, []);
+      if (formatted.length) {
+        setSelectedKom(formatted[0].komoditas_nama);
+      }
+    })
+    .catch(console.error);
+}, []);
 
   // Fetch heatmap GeoJSON
   const fetchHeatmap = useCallback(() => {
@@ -109,26 +100,6 @@ export default function HeatmapPage() {
 
   useEffect(() => { fetchHeatmap(); }, [fetchHeatmap]);
 
-  useEffect(() => {
-    if (selectedKab && geojsonData?.features) {
-      const updated = geojsonData.features.find(
-        f => f.properties.kabupaten === selectedKab.kabupaten
-      );
-      if (updated) {
-        const upProps = updated.properties;
-        if (
-          upProps.rata_kabupaten !== selectedKab.rata_kabupaten ||
-          upProps.komoditas_nama !== selectedKab.komoditas_nama ||
-          upProps.tanggal !== selectedKab.tanggal
-        ) {
-          setSelectedKab(upProps);
-        }
-      } else {
-        setSelectedKab(null);
-      }
-    }
-  }, [geojsonData, selectedKab]);
-
   const { min, max } = geojsonData?.features
     ? computeRange(geojsonData.features)
     : { min: 0, max: 1 };
@@ -136,9 +107,6 @@ export default function HeatmapPage() {
   const ranking = geojsonData?.features ? getRanking(geojsonData.features) : [];
 
   const activeInfo = selectedKab || hoveredKab;
-  const activeRank = activeInfo && ranking.length > 0
-    ? ranking.findIndex(f => f.properties.kabupaten === activeInfo.kabupaten) + 1
-    : null;
 
   return (
     <>
@@ -241,10 +209,10 @@ export default function HeatmapPage() {
                 {komoditasList.length === 0
                   ? <option>Memuat…</option>
                   : komoditasList.map((k, i) => (
-                    <option key={i} value={k.komoditas_nama}>
-                      {k.kategori}
+                      <option key={i} value={k.komoditas_nama}>
+                        {k.kategori}
                     </option>
-                  ))
+                    ))
                 }
               </select>
             </div>
@@ -279,7 +247,7 @@ export default function HeatmapPage() {
             {activeInfo ? (
               <>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>
-                  {activeRank ? `🏆 Peringkat ${activeRank}` : '🖱 Hover'}
+                  {selectedKab ? '📍 Dipilih' : '🖱 Hover'}
                 </div>
                 <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '17px', fontWeight: 800, color: 'var(--green-dark)', marginBottom: '2px' }}>
                   {activeInfo.kabupaten}

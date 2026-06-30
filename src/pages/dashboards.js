@@ -1,6 +1,5 @@
-// pages/index.js
-import Head from 'next/head';
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 import Layout from '@components/Layout';
 import Section from '@components/Section';
@@ -329,4 +328,8 @@ export default function Home() {
       </Section>
     </Layout>
   );
+export default function DashboardsRedirect() {
+  const router = useRouter();
+  useEffect(() => { router.replace("/peta-pasar"); }, []);
+  return null;
 }
