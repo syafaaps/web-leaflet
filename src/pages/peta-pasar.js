@@ -151,14 +151,24 @@ export default function PetaPasar() {
         <select value={selectedId || ""} onChange={e => setSelectedId(e.target.value)} className="filter-select">
           {komoditas.map(k => <option key={k.id} value={k.id}>{k.nama} ({k.satuan || "—"})</option>)}
         </select>
-        <select multiple value={provinsiIds}
-          onChange={e => {
-            const vals = Array.from(e.target.selectedOptions, opt => opt.value);
-            setProvinsiIds(vals);
+        <Select
+          name="provinsi"
+          options={provinsiList.map(p => ({ value: String(p.id), label: p.nama }))}
+          value={provinsiList
+            .filter(p => provinsiIds.includes(String(p.id)))
+            .map(p => ({ value: String(p.id), label: p.nama }))
+          }
+          onChange={vals => setProvinsiIds((vals ?? []).map(v => v.value))}
+          placeholder="Cari Provinsi..."
+          isMulti
+          isClearable
+          className="react-select"
+          classNamePrefix="rs"
+          styles={{
+            control: (base) => ({ ...base, minHeight: 36, fontSize: 13 }),
+            menu: (base) => ({ ...base, zIndex: 999 }),
           }}
-          className="filter-select filter-select-multi">
-          {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
-        </select>
+        />
         <Select
           name="kabkota"
           options={kabkotaOptions}
@@ -253,34 +263,6 @@ export default function PetaPasar() {
       <style jsx global>{`
         @keyframes mapSpin { to { transform: rotate(360deg); } }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .react-select .rs__control {
-          border-color: var(--border);
-          background: var(--bg);
-          font-family: var(--font);
-          min-width: 180px;
-          min-height: 36px;
-          font-size: 13px;
-          border-radius: var(--radius-sm);
-          box-shadow: none;
-        }
-        .react-select .rs__control:hover { border-color: var(--primary-20); }
-        .react-select .rs__control--is-focused {
-          border-color: var(--primary) !important;
-          box-shadow: 0 0 0 1px var(--primary-20) !important;
-        }
-        .react-select .rs__menu {
-          font-size: 13px;
-          z-index: 999;
-          font-family: var(--font);
-        }
-        .react-select .rs__option--is-selected { background: var(--primary); }
-        .react-select .rs__option--is-focused { background: var(--primary-10); }
-        .react-select .rs__placeholder { color: var(--text-muted); font-size: 13px; }
-        .react-select .rs__single-value { color: var(--text); }
-        .react-select .rs__clear-indicator { color: var(--text-muted); cursor: pointer; }
-        .react-select .rs__clear-indicator:hover { color: var(--text); }
-        .react-select .rs__dropdown-indicator { color: var(--text-muted); }
-        .filter-select-multi { min-height: 100px; min-width: 180px; }
       `}</style>
     </GeoAgriLayout>
   );
