@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/router";
 
 import Layout from '@components/Layout';
@@ -328,8 +328,4 @@ export default function Home() {
       </Section>
     </Layout>
   );
-export default function DashboardsRedirect() {
-  const router = useRouter();
-  useEffect(() => { router.replace("/peta-pasar"); }, []);
-  return null;
 }
