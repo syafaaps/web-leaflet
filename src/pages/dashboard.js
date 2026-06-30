@@ -5,6 +5,7 @@ import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import FilterBar from "@components/UI/FilterBar";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
+import Select from "react-select";
 
 const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
 
@@ -88,14 +89,24 @@ export default function DashboardPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
           Filter Data:
         </span>
-        <select multiple value={state.provinsi_ids}
-          onChange={e => {
-            const vals = Array.from(e.target.selectedOptions, opt => opt.value);
-            setState(s => ({ ...s, provinsi_ids: vals }));
+        <Select
+          name="provinsi"
+          options={provinsiItems.map(p => ({ value: String(p.id), label: p.nama }))}
+          value={provinsiItems
+            .filter(p => state.provinsi_ids.includes(String(p.id)))
+            .map(p => ({ value: String(p.id), label: p.nama }))
+          }
+          onChange={vals => setState(s => ({ ...s, provinsi_ids: (vals ?? []).map(v => v.value) }))}
+          placeholder="Cari Provinsi..."
+          isMulti
+          isClearable
+          className="react-select"
+          classNamePrefix="rs"
+          styles={{
+            control: (base) => ({ ...base, minHeight: 36, fontSize: 13 }),
+            menu: (base) => ({ ...base, zIndex: 999 }),
           }}
-          className="geo-select geo-select-multi">
-          {provinsiItems.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
-        </select>
+        />
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="date" id="filterMapTanggal" className="geo-date-input" onChange={() => loadMap()} />
         </div>

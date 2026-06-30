@@ -365,3 +365,39 @@ a { text-decoration: none; color: inherit; }
 .geo-badge-green { background: var(--green-10); color: var(--green); }
 .geo-badge-red { background: var(--red-10); color: var(--red); }
 .geo-badge-orange { background: var(--orange-10); color: var(--orange); }
+
+/* ── React-Select global ────────────────────────── */
+.react-select .rs__control {
+  border-color: var(--border);
+  background: var(--bg);
+  font-family: var(--font);
+  min-width: 180px;
+  min-height: 36px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+.react-select .rs__control:hover { border-color: var(--primary-20); }
+.react-select .rs__control--is-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 1px var(--primary-20) !important;
+}
+.react-select .rs__menu {
+  font-size: 13px;
+  z-index: 999;
+  font-family: var(--font);
+}
+.react-select .rs__option--is-selected { background: var(--primary); }
+.react-select .rs__option--is-focused { background: var(--primary-10); }
+.react-select .rs__placeholder { color: var(--text-muted); font-size: 13px; }
+.react-select .rs__single-value { color: var(--text); }
+.react-select .rs__multi-value {
+  background: var(--primary-10);
+  border-radius: var(--radius-sm);
+}
+.react-select .rs__multi-value__label { color: var(--primary); font-size: 12px; }
+.react-select .rs__multi-value__remove { color: var(--primary); cursor: pointer; }
+.react-select .rs__multi-value__remove:hover { background: var(--primary-20); color: var(--primary); }
+.react-select .rs__clear-indicator { color: var(--text-muted); cursor: pointer; }
+.react-select .rs__clear-indicator:hover { color: var(--text); }
+.react-select .rs__dropdown-indicator { color: var(--text-muted); }
