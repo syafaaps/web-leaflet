@@ -9,7 +9,7 @@ const navItems = [
   { href: "/analisis-pasar", label: "Analisis Pasar", icon: "M3 3h18v6H3zM6 9v12M18 9v12M9 21h6" },
   { href: "/peta-pasar", label: "Peta Pasar", icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" },
   { href: "/peta-komoditas", label: "Peta Komoditas", icon: "M11 3h8l4 4v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h4" },
-  { href: "/data", label: "Data", icon: "M3 9h18M3 15h18M9 3v18M15 3v18" },
+  // { href: "/data", label: "Data", icon: "M3 9h18M3 15h18M9 3v18M15 3v18" },
   { href: "/scraping-log", label: "Log Scraping", icon: "M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 6v6l4 2" },
 ];
 
@@ -27,7 +27,6 @@ export default function GeoAgriLayout({ title, children, hideSidebar }) {
           background: "linear-gradient(135deg, #155233, #1e7a52)",
           padding: "20px 20px 16px", borderBottom: "1px solid var(--sidebar-border)",
         }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "rgba(255,255,255,.55)", marginBottom: 4 }}>Jawa Timur</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: "-.4px", lineHeight: 1.2 }}>GeoAgri</div>
           <div style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "1px", color: "rgba(255,255,255,.6)", marginTop: 2 }}>Analytic Curator</div>
         </div>

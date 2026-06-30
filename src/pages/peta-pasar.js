@@ -18,9 +18,11 @@ export default function PetaPasar() {
   const [provinsiList, setProvinsiList] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [provinsiId, setProvinsiId] = useState("");
-  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = useState(() => new Date(Date.now() - 86400000).toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
+  const [kabkotaList, setKabkotaList] = useState([]);
+  const [kabkotaId, setKabkotaId] = useState("");
 
   const fetchMaster = useCallback(async () => {
     const [kRes, pRes] = await Promise.all([
@@ -33,6 +35,15 @@ export default function PetaPasar() {
     if (items.length) setSelectedId(String(items[0].id));
   }, []);
 
+  const fetchKabkota = useCallback(async (provId) => {
+    if (!provId) { setKabkotaList([]); setKabkotaId(""); return; }
+    const res = await api(`/api/master/kabkota?provinsi_id=${provId}`);
+    if (res.status === "success") setKabkotaList(res.data ?? []);
+    setKabkotaId("");
+  }, []);
+
+  useEffect(() => { fetchKabkota(provinsiId); }, [provinsiId, fetchKabkota]);
+
   const fetchData = useCallback(async () => {
     if (!selectedId) return;
     setLoading(true);
@@ -43,7 +54,8 @@ export default function PetaPasar() {
         setPasars([]);
       } else if (layer === "markers") {
         const pId = provinsiId || undefined;
-        const res = await api(`/api/komoditas/pasar-map?komoditas_id=${selectedId}&tanggal=${tanggal}${pId ? `&provinsi_id=${pId}` : ""}`);
+        const kId = kabkotaId || undefined;
+        const res = await api(`/api/komoditas/pasar-map?komoditas_id=${selectedId}&tanggal=${tanggal}${pId ? `&provinsi_id=${pId}` : ""}${kId ? `&kabkota_id=${kId}` : ""}`);
         const features = (res.features || []).map(f => ({
           ...f.properties,
           latitude: f.geometry?.coordinates?.[1],
@@ -56,7 +68,7 @@ export default function PetaPasar() {
       if (pp.status === "success") setStats(pp);
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [selectedId, layer, level, tanggal, provinsiId]);
+  }, [selectedId, layer, level, tanggal, provinsiId, kabkotaId]);
 
   useEffect(() => { fetchMaster(); }, [fetchMaster]);
   useEffect(() => { if (selectedId) fetchData(); }, [fetchData]);
@@ -137,6 +149,10 @@ export default function PetaPasar() {
         <select value={provinsiId} onChange={e => setProvinsiId(e.target.value)} className="filter-select">
           <option value="">Semua Provinsi</option>
           {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
+        </select>
+        <select value={kabkotaId} onChange={e => setKabkotaId(e.target.value)} className="filter-select" disabled={!provinsiId}>
+          <option value="">Semua Kab/Kota</option>
+          {kabkotaList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
         <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} className="filter-date-input" />
         <button onClick={fetchData} className="filter-btn">Terapkan</button>

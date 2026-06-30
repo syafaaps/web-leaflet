@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+﻿import { useEffect, useState, useCallback, useMemo } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
@@ -6,25 +6,17 @@ import StatCard from "@components/UI/StatCard";
 import FilterBar from "@components/UI/FilterBar";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
-const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
 
 const api = (url) => fetch(url).then(r => r.json());
-const fmt = (n) => n ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
-
-let trendChartInstance = null;
 
 export default function DashboardPage() {
-  const canvasRef = useRef(null);
-  const mapRef = useRef(null);
   const [state, setState] = useState({ komoditas_ids: [], provinsi_ids: [], range: 30 });
   const [stats, setStats] = useState({});
-  const [chartData, setChartData] = useState(null);
   const [komoditasItems, setKomoditasItems] = useState([]);
   const [komoditasIndex, setKomoditasIndex] = useState({});
   const [provinsiItems, setProvinsiItems] = useState([]);
   const [mapData, setMapData] = useState(null);
-  const [mapReady, setMapReady] = useState(false);
 
   const loadMaster = useCallback(async () => {
     const [kom, prov] = await Promise.all([
@@ -44,52 +36,30 @@ export default function DashboardPage() {
   const loadStats = useCallback(async () => {
     const aktif = state.komoditas_ids[0];
     if (!aktif) return;
-    const res = await api(`/api/komoditas/per-provinsi?komoditas_id=${aktif}`);
+    const params = new URLSearchParams({ komoditas_id: aktif });
+    state.provinsi_ids.forEach(id => params.append('provinsi_ids[]', id));
+    const res = await api(`/api/komoditas/per-provinsi?${params}`);
     if (res.status === "success") {
       setStats(res.meta);
     }
-  }, [state.komoditas_ids]);
-
-  const loadTrend = useCallback(async () => {
-    const ids = state.komoditas_ids.filter(Boolean);
-    if (!ids.length) return;
-    const to = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - state.range * 86400000).toISOString().slice(0, 10);
-    const responses = await Promise.all(ids.map(komoditasId =>
-      api(`/api/komoditas/tren?komoditas_id=${komoditasId}&from=${from}&to=${to}`)
-    ));
-    const series = responses.filter(r => r.status === "success").map((r, i) => ({
-      label: komoditasIndex[ids[i]] || `#${ids[i]}`,
-      color: ["#155233", "#3aab74", "#16a34a", "#ea580c", "#7c3aed"][i % 5],
-      points: r.data.map(d => ({ tanggal: d.tanggal, harga: d.harga })),
-    }));
-    if (!series.length) return;
-    const labelSet = new Set();
-    series.forEach(s => s.points.forEach(p => labelSet.add(p.tanggal)));
-    const rawLabels = Array.from(labelSet).sort();
-    const labels = rawLabels.map(d => new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }));
-    const datasets = series.map(s => ({
-      label: s.label, data: rawLabels.map(d => { const p = s.points.find(x => x.tanggal === d); return p ? p.harga : null; }),
-      borderColor: s.color, backgroundColor: s.color, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5, fill: false, tension: 0.45,
-    }));
-    setChartData({ labels, datasets });
-  }, [state.komoditas_ids, state.range, komoditasIndex]);
+  }, [state.komoditas_ids, state.provinsi_ids]);
 
   const loadMap = useCallback(async () => {
     const aktif = state.komoditas_ids[0];
     if (!aktif) return;
-    const tanggal = document.getElementById("filterMapTanggal")?.value || new Date().toISOString().slice(0, 10);
-    const res = await api(`/api/komoditas/map?komoditas_id=${aktif}&tanggal=${tanggal}&level=provinsi`);
+    const tanggal = document.getElementById("filterMapTanggal")?.value || new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const params = new URLSearchParams({ komoditas_id: aktif, tanggal, level: 'provinsi' });
+    state.provinsi_ids.forEach(id => params.append('provinsi_ids[]', id));
+    const res = await api(`/api/komoditas/map?${params}`);
     setMapData(res);
-  }, [state.komoditas_ids]);
+  }, [state.komoditas_ids, state.provinsi_ids]);
 
   useEffect(() => {
-    document.getElementById("filterMapTanggal").value = new Date().toISOString().slice(0, 10);
+    document.getElementById("filterMapTanggal").value = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     loadMaster();
   }, [loadMaster]);
 
-  useEffect(() => { if (state.komoditas_ids[0]) { loadStats(); loadMap(); } }, [state.komoditas_ids, loadStats, loadMap]);
-  useEffect(() => { if (state.komoditas_ids.length) loadTrend(); }, [state.komoditas_ids, loadTrend]);
+  useEffect(() => { if (state.komoditas_ids[0]) { loadStats(); loadMap(); } }, [state.komoditas_ids, state.provinsi_ids, loadStats, loadMap]);
 
   const mapDataReady = useMemo(() => {
     if (!mapData?.features) return null;
@@ -164,25 +134,9 @@ export default function DashboardPage() {
         <StatCard label="Data NULL" value={stats.data_null} color="#dc2626" sub={<span className="geo-badge geo-badge-red">Butuh Sinkron</span>} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16, marginBottom: 20, alignItems: "start" }}>
-        <div className="geo-card" style={{ padding: "22px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga Komoditas Utama</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }} id="chartSub">Pergerakan harga ({state.range} Hari)</div>
-            </div>
-          </div>
-          <div style={{ position: "relative", height: 240 }}>
-            {chartData ? (
-              <Chart type="line" data={chartData} options={{
-                responsive: true, maintainAspectRatio: false,
-                interaction: { mode: "index", intersect: false },
-                plugins: { legend: { display: true, position: "top" }, tooltip: { backgroundColor: "#fff", titleColor: "#111827", bodyColor: "#6b7280", borderColor: "#e5e7eb", borderWidth: 1, padding: 10, callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.raw)}` } } },
-                scales: { x: { grid: { display: false }, ticks: { font: { family: "Sora", size: 11 }, color: "#9ca3af", maxTicksLimit: 8 } }, y: { grid: { color: "rgba(0,0,0,.05)" }, border: { dash: [4, 4] }, ticks: { font: { family: "DM Mono", size: 11 }, color: "#9ca3af", callback: v => "Rp " + (v / 1000).toFixed(0) + "k" } } }
-              }} />
-            ) : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)" }}>Memuat data...</div>}
-          </div>
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 20, alignItems: "start" }}>
+        {/* Chart.js di-comment, hanya pakai Grafana */}
+        
 
         <div className="geo-card" style={{ padding: "22px 20px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
