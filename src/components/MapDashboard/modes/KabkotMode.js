@@ -148,7 +148,6 @@ export default function KabkotMode({ selectedDate, selectedKoms }) {
   const ranking = geojsonData?.features ? getRanking(geojsonData.features) : [];
   const rataProvinsi =
     geojsonData?.rata_provinsi || 0;
-  console.log("Rata provinsi dari API =", geojsonData?.rata_provinsi);
   const activeInfo = selectedKab || hoveredKab;
   const activeRank = activeInfo && ranking.length > 0
     ? ranking.findIndex(f => f.properties.kabupaten === activeInfo.kabupaten) + 1

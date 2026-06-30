@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useEffect, useState, useCallback } from "react";
+import Head from "next/head";
 
 import Layout from '@components/Layout';
 import Section from '@components/Section';
@@ -66,7 +66,7 @@ export default function Home() {
         setKomoditasList(formatted);
 
         if (formatted.length) {
-          setSelectedKom(formatted[0].komoditas_nama);
+          setSelectedKomoditas(formatted[0].komoditas_nama);
         }
       })
       .catch(console.error);
