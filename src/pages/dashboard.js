@@ -175,10 +175,7 @@ export default function DashboardPage() {
         <StatCard label="Data NULL" value={stats.data_null} color="#dc2626" sub={<span className="geo-badge geo-badge-red">Butuh Sinkron</span>} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 20, alignItems: "start" }}>
-        {/* Chart.js di-comment, hanya pakai Grafana */}
-        
-
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16, marginBottom: 20, alignItems: "start" }}>
         <div className="geo-card" style={{ padding: "22px 20px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Peringatan Harga</div>
@@ -200,22 +197,21 @@ export default function DashboardPage() {
             Lihat Semua Laporan
           </button>
         </div>
-      </div>
-
-      <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga (Grafana)</div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Panel embedded dari Grafana dashboard</div>
+        <div className="geo-card" style={{ padding: "22px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga (Grafana)</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Panel embedded dari Grafana dashboard</div>
+            </div>
           </div>
+          <GrafanaEmbed
+            panelId="panel-2"
+            komoditasIds={state.komoditas_ids}
+            provinsiIds={state.provinsi_ids}
+            range={state.range}
+            tab="analisis-tren-harga-komoditas"
+          />
         </div>
-        <GrafanaEmbed
-          panelId="panel-2"
-          komoditasIds={state.komoditas_ids}
-          provinsiIds={state.provinsi_ids}
-          range={state.range}
-          tab="analisis-tren-harga-komoditas"
-        />
       </div>
 
       <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
