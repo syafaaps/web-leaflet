@@ -146,7 +146,22 @@ export default function ScrapingLog() {
             {detail.failed_markets?.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6 }}>Failed Markets</div>
-                <pre style={{ fontSize: 11, background: "var(--bg)", padding: 12, borderRadius: "var(--radius-sm)", overflowX: "auto", maxHeight: 100 }}>{JSON.stringify(detail.failed_markets, null, 2)}</pre>
+                <ul style={{ margin: "4px 0 0", paddingLeft: 18, lineHeight: 1.6, fontSize: 12, color: "var(--text)" }}>
+                  {detail.failed_markets.map((m, i) => {
+                    let name, reason;
+                    if (typeof m === "string") { name = m; reason = ""; }
+                    else if (typeof m === "object" && m) {
+                      name = m.nama_pasar || m.name || m.nama || JSON.stringify(m);
+                      reason = m.alasan || m.reason || m.error || "";
+                    } else { name = String(m); reason = ""; }
+                    return (
+                      <li key={i}>
+                        {name}
+                        {reason && <span style={{ color: "var(--text-light)", fontSize: 11 }}> ({reason})</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </div>

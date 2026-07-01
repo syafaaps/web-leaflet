@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [komoditasIndex, setKomoditasIndex] = useState({});
   const [provinsiItems, setProvinsiItems] = useState([]);
   const [mapData, setMapData] = useState(null);
+  const [priceAlerts, setPriceAlerts] = useState([]);
 
   const loadMaster = useCallback(async () => {
     const [kom, prov] = await Promise.all([
@@ -32,6 +33,34 @@ export default function DashboardPage() {
     if (kom.data.length) {
       setState(s => ({ ...s, komoditas_ids: [String(kom.data[0].id)] }));
     }
+  }, []);
+
+  const loadPriceAlerts = useCallback(async () => {
+    const komRes = await api("/api/master/komoditas");
+    if (komRes.status !== "success" || !komRes.data?.length) return;
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const responses = await Promise.all(
+      komRes.data.map(k => api(`/api/komoditas/tren?komoditas_id=${k.id}&from=${from}&to=${to}`))
+    );
+    const alerts = responses
+      .map((r, i) => {
+        if (r.status !== "success" || !r.data?.length) return null;
+        const first = r.data[0].harga;
+        const last = r.data[r.data.length - 1].harga;
+        if (!first || !last) return null;
+        const change = ((last - first) / first) * 100;
+        return {
+          komoditas: komRes.data[i].nama,
+          pct: `${change > 0 ? "+" : ""}${change.toFixed(1)}%`,
+          color: change > 5 ? "#dc2626" : change > 2 ? "#d97706" : change < -2 ? "#16a34a" : "#6b7280",
+          pasar: "Nasional",
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => Math.abs(parseFloat(b.pct)) - Math.abs(parseFloat(a.pct)))
+      .slice(0, 3);
+    setPriceAlerts(alerts);
   }, []);
 
   const loadStats = useCallback(async () => {
@@ -58,7 +87,8 @@ export default function DashboardPage() {
   useEffect(() => {
     document.getElementById("filterMapTanggal").value = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     loadMaster();
-  }, [loadMaster]);
+    loadPriceAlerts();
+  }, [loadMaster, loadPriceAlerts]);
 
   useEffect(() => { if (state.komoditas_ids[0]) { loadStats(); loadMap(); } }, [state.komoditas_ids, state.provinsi_ids, loadStats, loadMap]);
 
@@ -157,11 +187,7 @@ export default function DashboardPage() {
               <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
-          {[
-            { komoditas: "Cabai Rawit Merah", pct: "+12.5%", pasar: "Pasar Induk Kramat Jati, Jakarta", color: "#dc2626" },
-            { komoditas: "Bawang Merah", pct: "+5.2%", pasar: "Pasar Caringin, Bandung", color: "#ea580c" },
-            { komoditas: "Daging Sapi", pct: "+8.1%", pasar: "Pasar Wonokromo, Surabaya", color: "#d97706" },
-          ].map((item, i) => (
+          {priceAlerts.length ? priceAlerts.map((item, i) => (
             <div key={i} style={{ borderLeft: "3px solid " + item.color, padding: "10px 12px", borderRadius: "0 var(--radius-sm) var(--radius-sm) 0", background: "var(--bg)", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{item.komoditas}</div>
@@ -169,7 +195,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{item.pasar}</div>
             </div>
-          ))}
+          )) : <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-muted)" }}>Memuat data peringatan...</div>}
           <button style={{ width: "100%", justifyContent: "center", marginTop: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}>
             Lihat Semua Laporan
           </button>
