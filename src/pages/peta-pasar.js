@@ -7,7 +7,7 @@ import Select from "react-select";
 const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
 const LeafletMapDynamic = dynamic(() => import("@components/Map/LeafletDynamicMap"), { ssr: false });
 
-const api = (url) => fetch(url).then(r => r.json());
+const api = (url) => fetch(url, { cache: 'no-cache' }).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
 
 export default function PetaPasar() {
@@ -55,7 +55,8 @@ export default function PetaPasar() {
         : '';
 
       if (layer === "choropleth") {
-        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${level}${provinsiParam}`);
+        const kId = kabkotaOption?.value;
+        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${level}${provinsiParam}${kId ? `&kabkota_id=${kId}` : ""}`);
         setGeoData(res);
         setPasars([]);
       } else if (layer === "markers") {
@@ -76,7 +77,7 @@ export default function PetaPasar() {
   }, [selectedId, layer, level, tanggal, provinsiIds, kabkotaOption]);
 
   useEffect(() => { fetchMaster(); }, [fetchMaster]);
-  useEffect(() => { if (selectedId) fetchData(); }, [fetchData]);
+  useEffect(() => { if (selectedId) fetchData(); }, [selectedId]);
 
   const komoditasTerpilih = useMemo(
     () => komoditas.find(k => String(k.id) === selectedId),
