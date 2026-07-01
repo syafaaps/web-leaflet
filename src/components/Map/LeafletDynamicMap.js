@@ -183,6 +183,9 @@ function buildPopupHTML(item) {
             background:${fill}18;color:${stroke};border:1px solid ${fill}50;
           ">${emoji} ${item.kategori}</span>
         </div>
+        <div class="popup-weather" style="margin-top:8px;padding:8px 11px;background:#f9fafb;border-radius:6px;font-size:11.5px;display:flex;align-items:center;gap:8px;">
+          <span class="weather-loading" style="color:#9ca3af;">⏳ Memuat cuaca...</span>
+        </div>
       </div>
     </div>`;
 }
