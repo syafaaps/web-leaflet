@@ -46,6 +46,14 @@ export default function PetaPasar() {
 
   useEffect(() => { fetchKabkota(provinsiIds); }, [provinsiIds, fetchKabkota]);
 
+  useEffect(() => {
+    if (kabkotaOption?.value) {
+      setLevel("kabupaten");
+    } else {
+      setLevel("provinsi");
+    }
+  }, [kabkotaOption]);
+
   const fetchData = useCallback(async () => {
     if (!selectedId) return;
     setLoading(true);
@@ -56,7 +64,8 @@ export default function PetaPasar() {
 
       if (layer === "choropleth") {
         const kId = kabkotaOption?.value;
-        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${level}${provinsiParam}${kId ? `&kabkota_id=${kId}` : ""}`);
+        const effectiveLevel = kId ? "kabupaten" : level;
+        const res = await api(`/api/komoditas/map?komoditas_id=${selectedId}&tanggal=${tanggal}&level=${effectiveLevel}${provinsiParam}${kId ? `&kabkota_id=${kId}` : ""}`);
         setGeoData(res);
         setPasars([]);
       } else if (layer === "markers") {
