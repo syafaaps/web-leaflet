@@ -102,7 +102,7 @@ export default function ScrapingLog() {
                     </td>
                     <td>
                       <button className="dtl-btn" onClick={() => setDetail(item)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
                       </button>
                     </td>
                   </tr>
@@ -122,7 +122,7 @@ export default function ScrapingLog() {
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{detail.workflow_name}</div>
               </div>
               <button onClick={() => setDetail(null)} style={{ width: 28, height: 28, borderRadius: "50%", border: "none", background: "var(--bg)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13 }}>
@@ -143,7 +143,7 @@ export default function ScrapingLog() {
                 <pre style={{ fontSize: 11, background: "var(--bg)", padding: 12, borderRadius: "var(--radius-sm)", overflowX: "auto", maxHeight: 150, color: "#dc2626" }}>{detail.error_message}</pre>
               </div>
             )}
-            {detail.failed_markets?.length > 0 && (
+            {Array.isArray(detail.failed_markets) && detail.failed_markets.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6 }}>Failed Markets</div>
                 <ul style={{ margin: "4px 0 0", paddingLeft: 18, lineHeight: 1.6, fontSize: 12, color: "var(--text)" }}>

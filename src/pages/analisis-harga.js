@@ -188,7 +188,7 @@ export default function AnalisisHarga() {
           <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: "var(--radius-sm)", background: "rgba(21,82,51,.06)", border: "1px solid var(--primary-20)", fontSize: 13, color: "var(--text)", lineHeight: 1.6 }}>
             {provData.length > 0 && stats ? (
               <>
-                Rata-rata harga nasional <strong>{fmt(stats.rata)}</strong> dengan harga terendah di <strong>{sortedRanking[0]?.provinsi}</strong> ({fmt(stats.min)}) dan tertinggi di <strong>{sortedRanking[sortedRanking.length - 1]?.provinsi}</strong> ({fmt(stats.max)}).
+                Rata-rata harga provinsi <strong>{fmt(stats.rata)}</strong> dengan harga terendah di <strong>{sortedRanking[0]?.provinsi}</strong> ({fmt(stats.min)}) dan tertinggi di <strong>{sortedRanking[sortedRanking.length - 1]?.provinsi}</strong> ({fmt(stats.max)}).
                 Selisih harga antar provinsi mencapai <strong>{fmt(stats.max - stats.min)}</strong>.
                 {volatility && volatility.cv > 30 ? " Volatilitas harga tergolong tinggi." : volatility && volatility.cv < 15 ? " Volatilitas harga tergolong rendah." : ""}
               </>
