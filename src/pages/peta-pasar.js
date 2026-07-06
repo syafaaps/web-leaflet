@@ -87,6 +87,8 @@ export default function PetaPasar() {
 
   useEffect(() => { fetchMaster(); }, [fetchMaster]);
   useEffect(() => { if (selectedId) fetchData(); }, [selectedId]);
+  useEffect(() => { if (selectedId && provinsiIds.length) fetchData(); }, [provinsiIds]);
+  useEffect(() => { if (selectedId && kabkotaOptions.length) fetchData(); }, [kabkotaOptions]);
 
   const komoditasTerpilih = useMemo(
     () => komoditas.find(k => String(k.id) === selectedId),
@@ -96,9 +98,39 @@ export default function PetaPasar() {
   const choroplethReady = useMemo(() => {
     if (!geoData?.features) return null;
     const nama = komoditasTerpilih?.nama || "";
+
+    let features = geoData.features;
+
+    if (kabkotaOption?.value) {
+      const targetName = kabkotaOption.label;
+      features = features.filter(f => {
+        const name = f.properties.nama || f.properties.kabupaten;
+        return name === targetName;
+      });
+    } else if (provinsiIds.length > 0) {
+      const kabNames = new Set(kabkotaOptions.map(o => o.label));
+      const kabMatch = features.filter(f => {
+        const name = f.properties.nama || f.properties.kabupaten;
+        return kabNames.has(name);
+      });
+      if (kabMatch.length > 0) {
+        features = kabMatch;
+      } else {
+        const selectedProvNames = new Set(
+          provinsiList
+            .filter(p => provinsiIds.includes(String(p.id)))
+            .map(p => p.nama)
+        );
+        features = features.filter(f => {
+          const name = f.properties.nama || f.properties.kabupaten;
+          return selectedProvNames.has(name);
+        });
+      }
+    }
+
     return {
       ...geoData,
-      features: geoData.features.map(f => ({
+      features: features.map(f => ({
         ...f,
         properties: {
           ...f.properties,
@@ -108,7 +140,7 @@ export default function PetaPasar() {
         }
       }))
     };
-  }, [geoData, komoditasTerpilih]);
+  }, [geoData, komoditasTerpilih, kabkotaOption, kabkotaOptions, provinsiIds, provinsiList]);
 
   const markerReady = useMemo(() => {
     const prices = pasars.map(p => Number(p.harga)).filter(v => v > 0);
