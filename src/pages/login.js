@@ -89,7 +89,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="admin@geoagri.id"
+                  placeholder="email"
                   style={{
                     width: "100%", padding: "10px 12px", borderRadius: "var(--radius-sm)",
                     border: "1px solid var(--border)", fontSize: 13, fontFamily: "var(--font)",

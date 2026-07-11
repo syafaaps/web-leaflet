@@ -61,12 +61,27 @@ export default function AnalisisHarga() {
   }, []);
 
   useEffect(() => {
+    const cacheKeyKom = "cache_master_komoditas";
+    const cacheKeyProv = "cache_master_provinsi";
+    const cachedKom = sessionStorage.getItem(cacheKeyKom);
+    const cachedProv = sessionStorage.getItem(cacheKeyProv);
+
+    if (cachedKom && cachedProv) {
+      setKomoditasList(JSON.parse(cachedKom));
+      setProvinsiList(JSON.parse(cachedProv));
+      return;
+    }
+
     Promise.all([
       api("/api/master/komoditas"),
       api("/api/master/provinsi"),
     ]).then(([kom, prov]) => {
-      setKomoditasList(kom.data || []);
-      setProvinsiList(prov.data || []);
+      const kData = kom.data || [];
+      const pData = prov.data || [];
+      setKomoditasList(kData);
+      setProvinsiList(pData);
+      sessionStorage.setItem(cacheKeyKom, JSON.stringify(kData));
+      sessionStorage.setItem(cacheKeyProv, JSON.stringify(pData));
     });
   }, []);
 
@@ -75,8 +90,18 @@ export default function AnalisisHarga() {
     setSelectedPasar(null);
     setPasarOptions([]);
     if (selectedProvinsi?.value) {
+      const cacheKey = `cache_kabkota_${selectedProvinsi.value}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setKabkotaOptions(JSON.parse(cached));
+        return;
+      }
       api(`/api/master/kabkota?provinsi_id=${selectedProvinsi.value}`)
-        .then(res => setKabkotaOptions((res.data ?? []).map(k => ({ value: String(k.id), label: k.nama }))))
+        .then(res => {
+          const opts = (res.data ?? []).map(k => ({ value: String(k.id), label: k.nama }));
+          setKabkotaOptions(opts);
+          sessionStorage.setItem(cacheKey, JSON.stringify(opts));
+        })
         .catch(() => setKabkotaOptions([]));
     } else {
       setKabkotaOptions([]);
@@ -114,7 +139,7 @@ export default function AnalisisHarga() {
 
       const [trendRes, heatmapRes] = await Promise.all([
         api(`/api/komoditas/tren?${params}`),
-        api(`/api/heatmap?komoditas=${selectedKomoditas.label}`),
+        api(`/api/heatmap?komoditas=${selectedKomoditas.label}&summary=true`),
       ]);
 
       setTrendData(trendRes.data || []);
