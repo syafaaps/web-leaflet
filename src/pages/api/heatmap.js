@@ -6,8 +6,7 @@ export default async function handler(req, res) {
     's-maxage=600, stale-while-revalidate=60'
   );
 
-  const { komoditas, tanggal } = req.query;
-  console.log('QUERY PARAMS:', req.query);
+  const { komoditas, tanggal, summary } = req.query;
 
   try {
     const conditions = [];
