@@ -21,6 +21,18 @@ export default function LandingPage() {
     }).catch(() => {});
   }, []);
 
+  const [authUser, setAuthUser] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("geoagri_token");
+    if (token) {
+      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(json => { if (json?.status === "success") setAuthUser(json.data); })
+        .catch(() => {});
+    }
+  }, []);
+
   return (
     <>
       <Head>
@@ -38,6 +50,15 @@ export default function LandingPage() {
             <a href="#dashboard" className="landing-nav-link">Dashboard</a>
             <a href="#peta" className="landing-nav-link">Peta</a>
             <a href="#ringkasan" className="landing-nav-link">Ringkasan</a>
+            {authUser ? (
+              <a href="/dashboard" className="landing-nav-link" style={{ color: "#155233", fontWeight: 700 }}>
+                Dashboard →
+              </a>
+            ) : (
+              <a href="/login" className="landing-nav-link" style={{ color: "#155233", fontWeight: 700 }}>
+                Login
+              </a>
+            )}
           </nav>
         </header>
 
