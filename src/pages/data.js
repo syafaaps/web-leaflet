@@ -2,6 +2,7 @@
 import Head from "next/head";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import Badge from "@components/UI/Badge";
+import Select from "react-select";
 
 const api = (url) => fetch(url).then(r => r.json());
 
@@ -48,6 +49,8 @@ export default function DataPage() {
   const [provinsiList, setProvinsiList] = useState([]);
   const [filterKom, setFilterKom] = useState("");
   const [filterProv, setFilterProv] = useState("");
+  const [filterKabKota, setFilterKabKota] = useState("");
+  const [kabkotaOptions, setKabkotaOptions] = useState([]);
   const [filterFrom, setFilterFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [filterTo, setFilterTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [lastSync, setLastSync] = useState(null);
@@ -59,11 +62,12 @@ export default function DataPage() {
       let url = `/api/komoditas/data?from=${filterFrom}&to=${filterTo}&limit=500`;
       if (filterKom) url += `&komoditas_id=${filterKom}`;
       if (filterProv) url += `&provinsi_id=${filterProv}`;
+      if (filterKabKota) url += `&kabkota_id=${filterKabKota}`;
       const res = await api(url);
       setData(res.data || []);
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [filterFrom, filterTo, filterKom, filterProv]);
+  }, [filterFrom, filterTo, filterKom, filterProv, filterKabKota]);
 
   useEffect(() => {
     const [kRes, pRes] = Promise.all([
@@ -76,6 +80,14 @@ export default function DataPage() {
     fetchData();
     setLastSync(new Date().toLocaleString("id-ID"));
   }, []);
+
+  useEffect(() => {
+    if (!filterProv) { setKabkotaOptions([]); setFilterKabKota(""); return; }
+    api(`/api/master/kabkota?provinsi_id=${filterProv}`).then(res => {
+      setKabkotaOptions(res.data || []);
+      setFilterKabKota("");
+    });
+  }, [filterProv]);
 
   const filtered = data.filter(item => {
     if (!search) return true;
@@ -98,9 +110,9 @@ export default function DataPage() {
   const paged = sorted.slice((page - 1) * perPage, page * perPage);
 
   const exportCSV = () => {
-    const header = "Tanggal,Provinsi,Pasar,Komoditas,Harga,Satuan,Status";
+    const header = "Tanggal,Provinsi,Kab/Kota,Pasar,Komoditas,Harga,Satuan,Status";
     const rows = sorted.map(item =>
-      `"${item.tanggal}","${item.provinsi}","${item.pasar}","${item.komoditas}",${item.harga ?? ""},"${item.satuan || ""}","${item.status}"`
+      `"${item.tanggal}","${item.provinsi}","${item.kabupaten || ""}","${item.pasar}","${item.komoditas}",${item.harga ?? ""},"${item.satuan || ""}","${item.status}"`
     );
     const blob = new Blob(["\ufeff" + header + "\n" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
@@ -110,8 +122,8 @@ export default function DataPage() {
   };
 
   const exportExcel = () => {
-    const header = ["Tanggal", "Provinsi", "Pasar", "Komoditas", "Harga", "Satuan", "Status"];
-    const rows = sorted.map(item => [item.tanggal, item.provinsi, item.pasar, item.komoditas, item.harga ?? "", item.satuan || "", item.status]);
+    const header = ["Tanggal", "Provinsi", "Kab/Kota", "Pasar", "Komoditas", "Harga", "Satuan", "Status"];
+    const rows = sorted.map(item => [item.tanggal, item.provinsi, item.kabupaten || "", item.pasar, item.komoditas, item.harga ?? "", item.satuan || "", item.status]);
     const xlsContent = [header, ...rows].map(r => r.join("\t")).join("\n");
     const blob = new Blob(["\ufeff" + xlsContent], { type: "application/vnd.ms-excel;charset=utf-8" });
     const a = document.createElement("a");
@@ -175,11 +187,32 @@ export default function DataPage() {
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Provinsi</div>
-            <select value={filterProv} onChange={e => { setFilterProv(e.target.value); setPage(1); }}
-              style={{ background: "var(--bg-white)", border: "1px solid var(--border)", color: "var(--text)", padding: "6px 12px", borderRadius: "var(--radius-sm)", fontFamily: "var(--font)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-              <option value="">Semua</option>
-              {provinsiList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
-            </select>
+            <Select
+              name="provinsi"
+              options={provinsiList.map(p => ({ value: String(p.id), label: p.nama }))}
+              value={filterProv ? { value: filterProv, label: provinsiList.find(p => String(p.id) === filterProv)?.nama } : null}
+              onChange={val => { setFilterProv(val ? val.value : ""); setPage(1); }}
+              placeholder="Semua"
+              isClearable
+              className="react-select"
+              classNamePrefix="rs"
+              styles={{ control: (base) => ({ ...base, minHeight: 36, fontSize: 13, minWidth: 180 }), menu: (base) => ({ ...base, zIndex: 999 }) }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Kab/Kota</div>
+            <Select
+              name="kabkota"
+              options={kabkotaOptions.map(k => ({ value: String(k.id), label: k.nama }))}
+              value={filterKabKota ? { value: filterKabKota, label: kabkotaOptions.find(k => String(k.id) === filterKabKota)?.nama } : null}
+              onChange={val => { setFilterKabKota(val ? val.value : ""); setPage(1); }}
+              placeholder="Semua"
+              isClearable
+              isDisabled={!filterProv}
+              className="react-select"
+              classNamePrefix="rs"
+              styles={{ control: (base) => ({ ...base, minHeight: 36, fontSize: 13, minWidth: 180 }), menu: (base) => ({ ...base, zIndex: 999 }) }}
+            />
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Dari</div>
@@ -221,6 +254,7 @@ export default function DataPage() {
                     <th style={{ width: 24 }}></th>
                     <th>Tanggal</th>
                     <th>Provinsi</th>
+                    <th>Kab/Kota</th>
                     <th>Pasar</th>
                     <th>Komoditas</th>
                     <th style={{ textAlign: "right" }}>Harga</th>
@@ -230,12 +264,13 @@ export default function DataPage() {
                 </thead>
                 <tbody>
                   {paged.length === 0 ? (
-                    <tr><td colSpan="8" style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>Tidak ada data</td></tr>
+                    <tr><td colSpan="9" style={{ textAlign: "center", padding: 32, color: "var(--text-muted)" }}>Tidak ada data</td></tr>
                   ) : paged.map((item, i) => (
                     <tr key={item.id || i}>
                       <td style={{ fontSize: 16 }}>{getEmoji(item.komoditas)}</td>
                       <td className="mono">{item.tanggal || "—"}</td>
                       <td style={{ color: "var(--text-muted)" }}>{item.provinsi}</td>
+                      <td style={{ color: "var(--text-muted)" }}>{item.kabupaten || "—"}</td>
                       <td>{item.pasar}</td>
                       <td><strong>{item.komoditas}</strong></td>
                       <td className="mono" style={{ textAlign: "right" }}>{item.harga ? "Rp " + Number(item.harga).toLocaleString("id-ID") : "—"}</td>

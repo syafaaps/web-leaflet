@@ -6,6 +6,9 @@ const pool = new Pool({
   database: 'harga_komoditas',
   password: 'alvina',
   port: 5432,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
 export default pool;

@@ -6,8 +6,7 @@ export default async function handler(req, res) {
     's-maxage=600, stale-while-revalidate=60'
   );
 
-  const { komoditas, tanggal } = req.query;
-  console.log('QUERY PARAMS:', req.query);
+  const { komoditas, tanggal, summary } = req.query;
 
   try {
     const conditions = [];
@@ -35,21 +34,22 @@ export default async function handler(req, res) {
         ? `WHERE ${conditions.join(' AND ')}`
         : '';
 
+    const isSummary = summary === 'true';
+
+    const selectCols = isSummary
+      ? `kabupaten, ROUND(rata_kabupaten::numeric, 0) AS rata_kabupaten`
+      : `uid, kabupaten, tanggal::text, komoditas_nama, ROUND(rata_kabupaten::numeric, 0) AS rata_kabupaten, ST_AsGeoJSON(geom)::json AS geojson`;
+
     const result = await pool.query(
       `
-      SELECT
-        uid,
-        kabupaten,
-        tanggal::text,
-        komoditas_nama,
-        ROUND(rata_kabupaten::numeric,0) AS rata_kabupaten,
-        ST_AsGeoJSON(geom)::json AS geojson
+      SELECT ${selectCols}
       FROM v_heatmap_kabkot
       ${whereClause}
-      ORDER BY kabupaten
+      ${isSummary ? 'ORDER BY rata_kabupaten DESC LIMIT 50' : 'ORDER BY kabupaten'}
     `,
       params
     );
+
     let rataProvinsi = 0;
 
     if (komoditas) {
@@ -57,17 +57,35 @@ export default async function handler(req, res) {
         ? tanggal
         : result.rows[0]?.tanggal;
 
-      const avgResult = await pool.query(
-        `
-        SELECT harga
-        FROM "komoditas_rata-rata"
-        WHERE tanggal = $1
-          AND komoditas_nama = $2
-        `,
-        [tanggalCari, komoditas]
-      );
+      if (tanggalCari) {
+        const avgResult = await pool.query(
+          `
+          SELECT harga
+          FROM "komoditas_rata-rata"
+          WHERE tanggal = $1
+            AND komoditas_nama = $2
+          `,
+          [tanggalCari, komoditas]
+        );
 
-      rataProvinsi = avgResult.rows[0]?.harga || 0;
+        rataProvinsi = avgResult.rows[0]?.harga || 0;
+      }
+    }
+
+    if (isSummary) {
+      const features = result.rows.map((row) => ({
+        type: 'Feature',
+        properties: {
+          kabupaten: row.kabupaten,
+          rata_kabupaten: row.rata_kabupaten,
+        },
+      }));
+
+      return res.status(200).json({
+        type: 'FeatureCollection',
+        features,
+        rata_provinsi: rataProvinsi,
+      });
     }
 
     const features = result.rows
@@ -85,10 +103,10 @@ export default async function handler(req, res) {
       }));
 
     res.status(200).json({
-    type: 'FeatureCollection',
-    features,
-    rata_provinsi: rataProvinsi,
-  });
+      type: 'FeatureCollection',
+      features,
+      rata_provinsi: rataProvinsi,
+    });
   } catch (error) {
     console.error(error);
 
