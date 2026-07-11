@@ -401,3 +401,46 @@ a { text-decoration: none; color: inherit; }
 .react-select .rs__clear-indicator { color: var(--text-muted); cursor: pointer; }
 .react-select .rs__clear-indicator:hover { color: var(--text); }
 .react-select .rs__dropdown-indicator { color: var(--text-muted); }
+
+/* ── Log Table ──────────────────────────────────────── */
+.log-table { width: 100%; border-collapse: collapse; }
+.log-table th {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--text-muted); text-align: left; padding: 0 0 12px;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.log-table td {
+  padding: 12px 0; font-size: 13px; color: var(--text);
+  border-bottom: 1px solid var(--bg-muted); vertical-align: middle;
+}
+
+/* ── Status Badge ───────────────────────────────────── */
+.st-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.st-badge.success { background: rgba(22,163,74,.1); color: #16a34a; }
+.st-badge.failed { background: rgba(220,38,38,.1); color: #dc2626; }
+.st-badge.running { background: rgba(245,158,11,.1); color: #d97706; }
+.st-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.st-badge.success .st-dot { background: #16a34a; }
+.st-badge.failed .st-dot { background: #dc2626; }
+.st-badge.running .st-dot { background: #d97706; animation: geoPulse 1.5s infinite; }
+
+/* ── Filter Button ──────────────────────────────────── */
+.flt-btn {
+  padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--bg); font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; text-transform: capitalize;
+}
+.flt-btn.active, .flt-btn:hover {
+  background: var(--primary-10); color: var(--primary); border-color: var(--primary-20);
+}
+
+/* ── Modal ──────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal {
+  background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 28px; max-width: 520px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.15); max-height: 80vh; overflow-y: auto;
+}
