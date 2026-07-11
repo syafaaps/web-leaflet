@@ -12,7 +12,6 @@ const guestNavItems = [
 
 const adminNavItems = [
   { href: "/admin/monitoring", label: "Monitoring Pipeline", icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
-  { href: "/admin/scraping-log", label: "Log Scraping", icon: "M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 6v6l4 2" },
   { divider: true, label: "Data Master" },
   { href: "/admin/master/provinsi", label: "Provinsi", icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" },
   { href: "/admin/master/kabkota", label: "Kabupaten/Kota", icon: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" },
