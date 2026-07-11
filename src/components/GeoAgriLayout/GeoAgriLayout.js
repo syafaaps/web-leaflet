@@ -7,6 +7,7 @@ const guestNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" },
   { href: "/analisis-harga", label: "Analisis Harga", icon: "M22 12l-4 0-3 9-6-18-3 9-4 0" },
   { href: "/peta-pasar", label: "Peta Pasar", icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" },
+  { href: "/peta-komoditas", label: "Peta Komoditas", icon: "M11 3h8l4 4v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h4" },
 ];
 
 const adminNavItems = [
