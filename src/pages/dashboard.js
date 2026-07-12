@@ -3,6 +3,7 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
+import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
 const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 
@@ -207,6 +208,17 @@ export default function DashboardPage() {
                 <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>Belum ada data.</div>
               )}
             </div>
+          </div>
+
+          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>
+              Tren Harga (Grafana)
+            </div>
+            <GrafanaEmbed
+              panelId="panel-2"
+              range={range}
+              tab="analisis-tren-harga-komoditas"
+            />
           </div>
         </>
       )}
