@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const RANGE_MAP = {7:"now-7d",30:"now-30d",90:"now-90d"};
 
-export default function GrafanaEmbed({ panelId, height = 260, komoditasIds = [], provinsiId = "", provinsiIds = [], range = 30, tab = "" }) {
+export default function GrafanaEmbed({ panelId, height = 260, komoditasIds = [], provinsiId = "", provinsiIds = [], kabkotaIds = [], pasarIds = [], range = 30, from = "", to = "", tab = "" }) {
   const containerRef = useRef(null);
   const iframeRef = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -29,7 +29,9 @@ export default function GrafanaEmbed({ panelId, height = 260, komoditasIds = [],
 
     const base = `${process.env.NEXT_PUBLIC_GRAFANA_URL}/d-solo/adqfddx/dashboard-geoagri`;
     const params = new URLSearchParams({
-      orgId: 1, from: RANGE_MAP[range] || "now-30d", to: "now",
+      orgId: 1,
+      from: from || RANGE_MAP[range] || "now-30d",
+      to: to || "now",
       timezone: "browser", theme: "light", kiosk: "",
       panelId,
     });
@@ -40,9 +42,11 @@ export default function GrafanaEmbed({ panelId, height = 260, komoditasIds = [],
     } else if (provinsiId) {
       params.set("var-provinsi", provinsiId);
     }
+    kabkotaIds.forEach(id => params.append("var-kabkota", id));
+    pasarIds.forEach(id => params.append("var-pasar", id));
 
     iframeRef.current.src = `${base}?${params}`;
-  }, [visible, panelId, komoditasIds, provinsiId, provinsiIds, range, tab]);
+  }, [visible, panelId, komoditasIds, provinsiId, provinsiIds, kabkotaIds, pasarIds, range, from, to, tab]);
 
   return (
     <div ref={containerRef} style={{ minHeight: height }}>

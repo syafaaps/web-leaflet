@@ -1,11 +1,11 @@
 ﻿import { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
-import dynamic from "next/dynamic";
+// import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
-const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
+// const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 
 const api = (url) => fetch(url).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
@@ -22,56 +22,56 @@ export default function DashboardPage() {
     });
   }, []);
 
-  const chartData = useMemo(() => {
-    if (!data?.trend?.length) return null;
-    const labels = data.trend.map(d => {
-      const dt = new Date(d.tanggal + "T00:00:00");
-      return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-    });
-    const prices = data.trend.map(d => d.harga);
-    return {
-      labels,
-      datasets: [{
-        label: "Rata-rata Nasional",
-        data: prices,
-        borderColor: "#155233",
-        backgroundColor: (ctx) => {
-          if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
-          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
-          g.addColorStop(0, "rgba(21,82,51,0.15)");
-          g.addColorStop(1, "rgba(21,82,51,0)");
-          return g;
-        },
-        fill: true,
-        borderWidth: 2.5,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        tension: 0.4,
-      }]
-    };
-  }, [data]);
+  // const chartData = useMemo(() => {
+  //   if (!data?.trend?.length) return null;
+  //   const labels = data.trend.map(d => {
+  //     const dt = new Date(d.tanggal + "T00:00:00");
+  //     return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+  //   });
+  //   const prices = data.trend.map(d => d.harga);
+  //   return {
+  //     labels,
+  //     datasets: [{
+  //       label: "Rata-rata Nasional",
+  //       data: prices,
+  //       borderColor: "#155233",
+  //       backgroundColor: (ctx) => {
+  //         if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
+  //         const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+  //         g.addColorStop(0, "rgba(21,82,51,0.15)");
+  //         g.addColorStop(1, "rgba(21,82,51,0)");
+  //         return g;
+  //       },
+  //       fill: true,
+  //       borderWidth: 2.5,
+  //       pointRadius: 0,
+  //       pointHoverRadius: 5,
+  //       tension: 0.4,
+  //     }]
+  //   };
+  // }, [data]);
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: "index", intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#fff",
-        titleColor: "#111827",
-        bodyColor: "#6b7280",
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        padding: 10,
-        callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
-      }
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
-      y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmt(v) } }
-    }
-  };
+  // const chartOptions = {
+  //   responsive: true,
+  //   maintainAspectRatio: false,
+  //   interaction: { mode: "index", intersect: false },
+  //   plugins: {
+  //     legend: { display: false },
+  //     tooltip: {
+  //       backgroundColor: "#fff",
+  //       titleColor: "#111827",
+  //       bodyColor: "#6b7280",
+  //       borderColor: "#e5e7eb",
+  //       borderWidth: 1,
+  //       padding: 10,
+  //       callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
+  //     }
+  //   },
+  //   scales: {
+  //     x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
+  //     y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmt(v) } }
+  //   }
+  // };
 
   const ls = data?.last_scrape;
   const scrapeInfo = ls ? (
@@ -106,7 +106,8 @@ export default function DashboardPage() {
             <StatCard label="Update Scraping" value={ls?.finished_at ? new Date(ls.finished_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} color="#0891b2" sub={ls ? `${ls.total_data} data · ${ls.total_pasar} pasar` : ""} />
           </div>
 
-          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+          {/* ── CHART.JS: TREN HARGA NASIONAL (DINONAKTIFKAN) ── */}
+          {/* <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga Nasional</div>
@@ -134,9 +135,9 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
             <div className="geo-card" style={{ padding: "22px 24px" }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
