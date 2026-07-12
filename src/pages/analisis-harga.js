@@ -1,35 +1,35 @@
 ﻿import { useEffect, useState, useCallback, useMemo } from "react";
 import Head from "next/head";
-// import dynamic from "next/dynamic";
+import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 import Select from "react-select";
 
-// const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
+const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 
 const api = (url) => fetch(url).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
-// const fmtShort = (n) => n != null ? "Rp" + (n / 1000).toFixed(0) + "k" : "—";
+const fmtShort = (n) => n != null ? "Rp" + (n / 1000).toFixed(0) + "k" : "—";
 
-// const colors = ["#155233", "#3aab74", "#16a34a", "#ea580c", "#7c3aed", "#0891b2", "#d97706", "#be185d", "#f43f5e", "#0ea5e9"];
+const colors = ["#155233", "#3aab74", "#16a34a", "#ea580c", "#7c3aed", "#0891b2", "#d97706", "#be185d", "#f43f5e", "#0ea5e9"];
 
-// const chartDefaultOptions = {
-//   responsive: true, maintainAspectRatio: false,
-//   interaction: { mode: "index", intersect: false },
-//   plugins: {
-//     legend: { display: false },
-//     tooltip: {
-//       backgroundColor: "#fff", titleColor: "#111827", bodyColor: "#6b7280",
-//       borderColor: "#e5e7eb", borderWidth: 1, padding: 10,
-//       callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
-//     }
-//   },
-//   scales: {
-//     x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
-//     y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmtShort(v) } }
-//   }
-// };
+const chartDefaultOptions = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: "index", intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: "#fff", titleColor: "#111827", bodyColor: "#6b7280",
+      borderColor: "#e5e7eb", borderWidth: 1, padding: 10,
+      callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
+    }
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
+    y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmtShort(v) } }
+  }
+};
 
 export default function AnalisisHarga() {
   const [komoditasList, setKomoditasList] = useState([]);
@@ -155,59 +155,59 @@ export default function AnalisisHarga() {
     return [...perProvData.data].sort((a, b) => b.harga - a.harga);
   }, [perProvData]);
 
-  // const chartData = useMemo(() => {
-  //   if (!trendData?.length) return null;
-  //   return {
-  //     labels: trendData.map(d => {
-  //       const dt = new Date(d.tanggal + "T00:00:00");
-  //       return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-  //     }),
-  //     datasets: [{
-  //       label: selectedKomoditas?.label || "Harga",
-  //       data: trendData.map(d => Number(d.harga)),
-  //       borderColor: "#155233",
-  //       backgroundColor: (ctx) => {
-  //         if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
-  //         const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 280);
-  //         g.addColorStop(0, "rgba(21,82,51,0.15)");
-  //         g.addColorStop(1, "rgba(21,82,51,0)");
-  //         return g;
-  //       },
-  //       fill: true, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 6, tension: .4,
-  //     }]
-  //   };
-  // }, [trendData, selectedKomoditas]);
+  const chartData = useMemo(() => {
+    if (!trendData?.length) return null;
+    return {
+      labels: trendData.map(d => {
+        const dt = new Date(d.tanggal + "T00:00:00");
+        return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+      }),
+      datasets: [{
+        label: selectedKomoditas?.label || "Harga",
+        data: trendData.map(d => Number(d.harga)),
+        borderColor: "#155233",
+        backgroundColor: (ctx) => {
+          if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 280);
+          g.addColorStop(0, "rgba(21,82,51,0.15)");
+          g.addColorStop(1, "rgba(21,82,51,0)");
+          return g;
+        },
+        fill: true, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 6, tension: .4,
+      }]
+    };
+  }, [trendData, selectedKomoditas]);
 
-  // const comparisonChartData = useMemo(() => {
-  //   if (!ranking.length) return null;
-  //   const top = ranking.slice(0, 15);
-  //   const avg = ranking.reduce((s, r) => s + r.harga, 0) / ranking.length;
-  //   return {
-  //     labels: top.map(d => d.provinsi),
-  //     datasets: [
-  //       {
-  //         data: top.map(d => d.harga),
-  //         backgroundColor: top.map(d =>
-  //           d.harga > avg * 1.1 ? "#fca5a5" : d.harga < avg * 0.9 ? "#86efac" : "#a5b4fc"
-  //         ),
-  //         borderColor: top.map(d =>
-  //           d.harga > avg * 1.1 ? "#dc2626" : d.harga < avg * 0.9 ? "#16a34a" : "#2d3bde"
-  //         ),
-  //         borderWidth: 1.5,
-  //         borderRadius: 5,
-  //       },
-  //     ],
-  //   };
-  // }, [ranking]);
+  const comparisonChartData = useMemo(() => {
+    if (!ranking.length) return null;
+    const top = ranking.slice(0, 15);
+    const avg = ranking.reduce((s, r) => s + r.harga, 0) / ranking.length;
+    return {
+      labels: top.map(d => d.provinsi),
+      datasets: [
+        {
+          data: top.map(d => d.harga),
+          backgroundColor: top.map(d =>
+            d.harga > avg * 1.1 ? "#fca5a5" : d.harga < avg * 0.9 ? "#86efac" : "#a5b4fc"
+          ),
+          borderColor: top.map(d =>
+            d.harga > avg * 1.1 ? "#dc2626" : d.harga < avg * 0.9 ? "#16a34a" : "#2d3bde"
+          ),
+          borderWidth: 1.5,
+          borderRadius: 5,
+        },
+      ],
+    };
+  }, [ranking]);
 
-  // const barOptions = {
-  //   ...chartDefaultOptions,
-  //   indexAxis: "y",
-  //   scales: {
-  //     x: { grid: { display: false }, ticks: { font: { size: 10 }, callback: v => fmtShort(v) } },
-  //     y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-  //   }
-  // };
+  const barOptions = {
+    ...chartDefaultOptions,
+    indexAxis: "y",
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 }, callback: v => fmtShort(v) } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  };
 
   const komoditasOpts = komoditasList.map(k => ({ value: String(k.id), label: k.nama }));
   const provinsiOpts = provinsiList.map(p => ({ value: String(p.id), label: p.nama }));
@@ -320,8 +320,7 @@ export default function AnalisisHarga() {
         </div>
       )}
 
-      {/* ── CHART.JS: TREN HARGA (DINONAKTIFKAN) ── */}
-      {/* {!loading && chartData && (
+      {!loading && chartData && (
         <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
@@ -338,16 +337,15 @@ export default function AnalisisHarga() {
             <Chart type="line" data={chartData} options={chartDefaultOptions} />
           </div>
         </div>
-      )} */}
+      )}
 
-      {!loading && !trendData && !error && selectedKomoditas && (
+      {!loading && !chartData && !error && selectedKomoditas && (
         <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
           Tidak ada data untuk rentang tanggal yang dipilih.
         </div>
       )}
 
-      {/* ── CHART.JS: PERBANDINGAN PROVINSI (DINONAKTIFKAN) ── */}
-      {/* {!loading && comparisonChartData && (
+      {!loading && comparisonChartData && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
           <div className="geo-card" style={{ padding: "22px 24px" }}>
             <div style={{ marginBottom: 16 }}>
@@ -392,7 +390,7 @@ export default function AnalisisHarga() {
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
       {!loading && trendData && (
         <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>

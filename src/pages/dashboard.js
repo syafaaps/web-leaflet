@@ -1,11 +1,15 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
+import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
+const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
+
 const api = (url) => fetch(url).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
+const fmtShort = (n) => n != null ? "Rp" + (n / 1000).toFixed(0) + "k" : "—";
 
 const toDate = (d) => d.toISOString().slice(0, 10);
 
@@ -39,6 +43,57 @@ export default function DashboardPage() {
 
   const komoditasOpts = komoditasList.map(k => ({ value: String(k.id), label: k.nama }));
   const ls = data?.last_scrape;
+
+  const chartData = useMemo(() => {
+    if (!data?.trend?.length) return null;
+    const labels = data.trend.map(d => {
+      const dt = new Date(d.tanggal + "T00:00:00");
+      return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    });
+    const prices = data.trend.map(d => d.harga);
+    return {
+      labels,
+      datasets: [{
+        label: "Rata-rata Nasional",
+        data: prices,
+        borderColor: "#155233",
+        backgroundColor: (ctx) => {
+          if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+          g.addColorStop(0, "rgba(21,82,51,0.15)");
+          g.addColorStop(1, "rgba(21,82,51,0)");
+          return g;
+        },
+        fill: true,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+      }]
+    };
+  }, [data]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#fff",
+        titleColor: "#111827",
+        bodyColor: "#6b7280",
+        borderColor: "#e5e7eb",
+        borderWidth: 1,
+        padding: 10,
+        callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
+      y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmtShort(v) } }
+    }
+  };
 
   return (
     <GeoAgriLayout title="Dashboard">
@@ -102,6 +157,30 @@ export default function DashboardPage() {
                   {r} Hari
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga Nasional</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                  {selectedKomoditas ? komoditasOpts.find(o => o.value === selectedKomoditas)?.label : "Rata-rata seluruh komoditas"}
+                  {" · "}
+                  {tanggalMulai && tanggalSelesai
+                    ? `${tanggalMulai} s.d. ${tanggalSelesai}`
+                    : `${range} hari terakhir`}
+                </div>
+              </div>
+            </div>
+            <div style={{ height: 280, position: "relative" }}>
+              {chartData ? (
+                <Chart type="line" data={chartData} options={chartOptions} />
+              ) : (
+                <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)", fontSize: 13 }}>
+                  Belum ada data tren.
+                </div>
+              )}
             </div>
           </div>
 

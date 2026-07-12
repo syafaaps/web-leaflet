@@ -6,7 +6,7 @@ import StatCard from "@components/UI/StatCard";
 import FilterBar from "@components/UI/FilterBar";
 import Panel from "@components/UI/Panel";
 import Spinner from "@components/UI/Spinner";
-import { apiGet, apiPost } from "@lib/api";
+import { apiGet } from "@lib/api";
 
 function fmtDuration(sec) {
   if (!sec && sec !== 0) return "—";
@@ -19,8 +19,7 @@ export default function MonitoringPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");
-  const [triggering, setTriggering] = useState(false);
-  const [triggerMsg, setTriggerMsg] = useState("");
+
   const [detail, setDetail] = useState(null);
 
   const fetchStatus = useCallback(async () => {
@@ -51,19 +50,6 @@ export default function MonitoringPage() {
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  const handleTrigger = async () => {
-    setTriggering(true);
-    setTriggerMsg("");
-    const res = await apiPost("/api/admin/pipeline/trigger", {});
-    if (res?.status === "success") {
-      setTriggerMsg("Scraping workflow berhasil ditrigger!");
-      setTimeout(() => { fetchStatus(); fetchLogs(); }, 2000);
-    } else {
-      setTriggerMsg(res?.message || "Gagal men-trigger scraping.");
-    }
-    setTriggering(false);
-  };
-
   return (
     <AdminGuard>
       <GeoAgriLayout title="Monitoring Pipeline">
@@ -80,45 +66,6 @@ export default function MonitoringPage() {
           <StatCard label="Sukses" value={status?.total_success ?? "—"} color="#16a34a" />
           <StatCard label="Gagal" value={status?.total_failed ?? "—"} color="#dc2626" />
           <StatCard label="Berjalan" value={status?.total_running ?? "—"} color="#d97706" />
-        </div>
-
-        {/* Trigger Section */}
-        <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Workflow Scraping</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                Terakhir dijalankan: {status?.last_scraping
-                  ? new Date(status.last_scraping).toLocaleString("id-ID")
-                  : "Belum pernah dijalankan"}
-              </div>
-            </div>
-            <button
-              onClick={handleTrigger}
-              disabled={triggering || status?.total_running > 0}
-              style={{
-                padding: "10px 20px", borderRadius: "var(--radius-sm)",
-                background: "var(--primary)", color: "#fff", border: "none",
-                fontSize: 13, fontWeight: 600, fontFamily: "var(--font)",
-                cursor: triggering ? "not-allowed" : "pointer",
-                opacity: triggering || status?.total_running > 0 ? 0.6 : 1,
-                transition: "opacity .15s",
-              }}
-            >
-              {triggering ? "Menjalankan..." : status?.total_running > 0 ? "Sedang Berjalan" : "Jalankan Scraping"}
-            </button>
-          </div>
-          {triggerMsg && (
-            <div style={{
-              marginTop: 12, padding: "10px 14px", borderRadius: "var(--radius-sm)",
-              background: triggerMsg.includes("berhasil") ? "var(--green-10)" : "var(--red-10)",
-              border: `1px solid ${triggerMsg.includes("berhasil") ? "rgba(22,163,74,.2)" : "rgba(220,38,38,.2)"}`,
-              color: triggerMsg.includes("berhasil") ? "var(--green)" : "var(--red)",
-              fontSize: 12, fontWeight: 500,
-            }}>
-              {triggerMsg}
-            </div>
-          )}
         </div>
 
         {/* Filter */}
