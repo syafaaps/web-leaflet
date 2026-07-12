@@ -5,6 +5,7 @@ import Layout from '@components/Layout';
 import Section from '@components/Section';
 import Container from '@components/Container';
 import Map from '@components/Map';
+import GrafanaEmbed from '@components/UI/GrafanaEmbed';
 
 import styles from '@styles/Home.module.scss';
 
@@ -321,6 +322,18 @@ export default function Home() {
               }}>
                 {stats.total} pasar · {selectedKomoditas || 'semua'}
               </div>
+            </div>
+
+            {/* ── GRAFANA ── */}
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px 20px', marginTop: '14px', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--green-dark)', marginBottom: 12 }}>
+                Tren Harga (Grafana)
+              </div>
+              <GrafanaEmbed
+                panelId="panel-2"
+                range={30}
+                tab="analisis-tren-harga-komoditas"
+              />
             </div>
 
           </div>

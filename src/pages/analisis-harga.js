@@ -3,6 +3,7 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
+import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 import Select from "react-select";
 
 const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
@@ -388,6 +389,21 @@ export default function AnalisisHarga() {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {!loading && chartData && (
+        <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>
+            Tren Harga (Grafana)
+          </div>
+          <GrafanaEmbed
+            panelId="panel-2"
+            komoditasIds={selectedKomoditas ? [selectedKomoditas.value] : []}
+            provinsiIds={selectedProvinsi ? [selectedProvinsi.value] : []}
+            range={30}
+            tab="analisis-tren-harga-komoditas"
+          />
         </div>
       )}
 
