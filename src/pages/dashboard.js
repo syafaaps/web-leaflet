@@ -1,236 +1,223 @@
-﻿import { useEffect, useState, useCallback, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
-import FilterBar from "@components/UI/FilterBar";
-import GrafanaEmbed from "@components/UI/GrafanaEmbed";
-import Select from "react-select";
 
-const LeafletHeatmapMap = dynamic(() => import("@components/Map/LeafletHeatmapMap"), { ssr: false });
+const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
 
 const api = (url) => fetch(url).then(r => r.json());
+const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
 
 export default function DashboardPage() {
-  const [state, setState] = useState({ komoditas_ids: [], provinsi_ids: [], range: 30 });
-  const [stats, setStats] = useState({});
-  const [komoditasItems, setKomoditasItems] = useState([]);
-  const [komoditasIndex, setKomoditasIndex] = useState({});
-  const [provinsiItems, setProvinsiItems] = useState([]);
-  const [mapData, setMapData] = useState(null);
-  const [priceAlerts, setPriceAlerts] = useState([]);
-
-  const loadMaster = useCallback(async () => {
-    const [kom, prov] = await Promise.all([
-      api("/api/master/komoditas"),
-      api("/api/master/provinsi"),
-    ]);
-    const idx = {};
-    kom.data.forEach(k => { idx[k.id] = `${k.nama} (${k.satuan ?? "-"})`; });
-    setKomoditasIndex(idx);
-    setKomoditasItems(kom.data);
-    setProvinsiItems(prov.data ?? []);
-    if (kom.data.length) {
-      setState(s => ({ ...s, komoditas_ids: [String(kom.data[0].id)] }));
-    }
-  }, []);
-
-  const loadPriceAlerts = useCallback(async () => {
-    const komRes = await api("/api/master/komoditas");
-    if (komRes.status !== "success" || !komRes.data?.length) return;
-    const to = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const responses = await Promise.all(
-      komRes.data.map(k => api(`/api/komoditas/tren?komoditas_id=${k.id}&from=${from}&to=${to}`))
-    );
-    const alerts = responses
-      .map((r, i) => {
-        if (r.status !== "success" || !r.data?.length) return null;
-        const first = r.data[0].harga;
-        const last = r.data[r.data.length - 1].harga;
-        if (!first || !last) return null;
-        const change = ((last - first) / first) * 100;
-        return {
-          komoditas: komRes.data[i].nama,
-          pct: `${change > 0 ? "+" : ""}${change.toFixed(1)}%`,
-          color: change > 5 ? "#dc2626" : change > 2 ? "#d97706" : change < -2 ? "#16a34a" : "#6b7280",
-          pasar: "Nasional",
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => Math.abs(parseFloat(b.pct)) - Math.abs(parseFloat(a.pct)))
-      .slice(0, 3);
-    setPriceAlerts(alerts);
-  }, []);
-
-  const loadStats = useCallback(async () => {
-    const aktif = state.komoditas_ids[0];
-    if (!aktif) return;
-    const params = new URLSearchParams({ komoditas_id: aktif });
-    state.provinsi_ids.forEach(id => params.append('provinsi_ids[]', id));
-    const res = await api(`/api/komoditas/per-provinsi?${params}`);
-    if (res.status === "success") {
-      setStats(res.meta);
-    }
-  }, [state.komoditas_ids, state.provinsi_ids]);
-
-  const loadMap = useCallback(async () => {
-    const aktif = state.komoditas_ids[0];
-    if (!aktif) return;
-    const tanggal = document.getElementById("filterMapTanggal")?.value || new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const params = new URLSearchParams({ komoditas_id: aktif, tanggal, level: 'provinsi' });
-    state.provinsi_ids.forEach(id => params.append('provinsi_ids[]', id));
-    const res = await api(`/api/komoditas/map?${params}`);
-    setMapData(res);
-  }, [state.komoditas_ids, state.provinsi_ids]);
+  const [data, setData] = useState(null);
+  const [range, setRange] = useState(30);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.getElementById("filterMapTanggal").value = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    loadMaster();
-    loadPriceAlerts();
-  }, [loadMaster, loadPriceAlerts]);
+    api("/api/dashboard").then(res => {
+      if (res.status === "success") setData(res.data);
+      setLoading(false);
+    });
+  }, []);
 
-  useEffect(() => { if (state.komoditas_ids[0]) { loadStats(); loadMap(); } }, [state.komoditas_ids, state.provinsi_ids, loadStats, loadMap]);
-
-  const mapDataReady = useMemo(() => {
-    if (!mapData?.features) return null;
-    const aktif = state.komoditas_ids[0];
-    const nama = komoditasIndex[aktif] || "";
+  const chartData = useMemo(() => {
+    if (!data?.trend?.length) return null;
+    const labels = data.trend.map(d => {
+      const dt = new Date(d.tanggal + "T00:00:00");
+      return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+    });
+    const prices = data.trend.map(d => d.harga);
     return {
-      ...mapData,
-      features: mapData.features.map(f => ({
-        ...f,
-        properties: {
-          ...f.properties,
-          kabupaten: f.properties.nama || f.properties.kabupaten,
-          rata_kabupaten: f.properties.harga || f.properties.rata_kabupaten,
-          komoditas_nama: nama,
-        }
-      }))
+      labels,
+      datasets: [{
+        label: "Rata-rata Nasional",
+        data: prices,
+        borderColor: "#155233",
+        backgroundColor: (ctx) => {
+          if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+          g.addColorStop(0, "rgba(21,82,51,0.15)");
+          g.addColorStop(1, "rgba(21,82,51,0)");
+          return g;
+        },
+        fill: true,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+      }]
     };
-  }, [mapData, komoditasIndex, state.komoditas_ids]);
+  }, [data]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#fff",
+        titleColor: "#111827",
+        bodyColor: "#6b7280",
+        borderColor: "#e5e7eb",
+        borderWidth: 1,
+        padding: 10,
+        callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
+      y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmt(v) } }
+    }
+  };
+
+  const ls = data?.last_scrape;
+  const scrapeInfo = ls ? (
+    <span>
+      {ls.workflow} · {new Date(ls.finished_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+    </span>
+  ) : "—";
 
   return (
     <GeoAgriLayout title="Dashboard">
       <Head><title>Dashboard — GeoAgri</title></Head>
 
-      <FilterBar>
-        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-          Filter Data:
-        </span>
-        <Select
-          name="provinsi"
-          options={provinsiItems.map(p => ({ value: String(p.id), label: p.nama }))}
-          value={provinsiItems
-            .filter(p => state.provinsi_ids.includes(String(p.id)))
-            .map(p => ({ value: String(p.id), label: p.nama }))
-          }
-          onChange={vals => setState(s => ({ ...s, provinsi_ids: (vals ?? []).map(v => v.value) }))}
-          placeholder="Cari Provinsi..."
-          isMulti
-          isClearable
-          className="react-select"
-          classNamePrefix="rs"
-          styles={{
-            control: (base) => ({ ...base, minHeight: 36, fontSize: 13 }),
-            menu: (base) => ({ ...base, zIndex: 999 }),
-          }}
-        />
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <input type="date" id="filterMapTanggal" className="geo-date-input" onChange={() => loadMap()} />
-        </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {[7, 30, 90].map(r => (
-            <button key={r} className={`geo-range-btn ${state.range === r ? "active" : ""}`}
-              onClick={() => setState(s => ({ ...s, range: r }))}>{r} Hari</button>
-          ))}
-        </div>
-      </FilterBar>
-
-      <div className="komoditas-picker">
-        <span className="komoditas-picker-label">Komoditas:</span>
-        {komoditasItems.map(k => (
-          <button key={k.id} type="button"
-            className={`komoditas-chip ${state.komoditas_ids.includes(String(k.id)) ? "active" : ""}`}
-            onClick={() => {
-              const id = String(k.id);
-              setState(s => ({
-                ...s,
-                komoditas_ids: s.komoditas_ids.includes(id)
-                  ? s.komoditas_ids.filter(x => x !== id)
-                  : [...s.komoditas_ids, id]
-              }));
-            }}>
-            {k.nama} ({k.satuan ?? "-"})
-          </button>
-        ))}
-        <span className="komoditas-summary">{state.komoditas_ids.length} dipilih</span>
+      <div className="page-header">
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-desc">Monitoring ringkas data harga komoditas pertanian nasional.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
-        <StatCard label="Total Komoditas" value={stats.total_komoditas} />
-        <StatCard label="Total Pasar" value={stats.total_pasar} color="#7c3aed" sub={<span style={{ color: "var(--text-muted)" }}>Nasional</span>} />
-        <StatCard label="Data Valid" value={stats.data_valid} color="#16a34a" sub={<span className="geo-badge geo-badge-green">? {stats.data_valid_pct?.toFixed(1)}%</span>} />
-        <StatCard label="Data NULL" value={stats.data_null} color="#dc2626" sub={<span className="geo-badge geo-badge-red">Butuh Sinkron</span>} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16, marginBottom: 20, alignItems: "start" }}>
-        <div className="geo-card" style={{ padding: "22px 20px", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Peringatan Harga</div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 60, color: "var(--text-muted)", fontSize: 13 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite", marginRight: 8 }}>
+            <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+          </svg>
+          Memuat data...
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
+            <StatCard label="Total Komoditas" value={data?.total_komoditas ?? "—"} color="#155233" />
+            <StatCard label="Total Provinsi" value={data?.total_provinsi ?? "—"} color="#2d3bde" />
+            <StatCard label="Total Kab/Kota" value={data?.total_kabkota ?? "—"} color="#7c3aed" />
+            <StatCard label="Total Pasar" value={data?.total_pasar ?? "—"} color="#ea580c" />
+            <StatCard label="Update Scraping" value={ls?.finished_at ? new Date(ls.finished_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} color="#0891b2" sub={ls ? `${ls.total_data} data · ${ls.total_pasar} pasar` : ""} />
           </div>
-          {priceAlerts.length ? priceAlerts.map((item, i) => (
-            <div key={i} style={{ borderLeft: "3px solid " + item.color, padding: "10px 12px", borderRadius: "0 var(--radius-sm) var(--radius-sm) 0", background: "var(--bg)", marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{item.komoditas}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--mono)", color: item.color }}>{item.pct}</div>
+
+          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga Nasional</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                  Rata-rata harga seluruh komoditas · {range} hari terakhir
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{item.pasar}</div>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[7, 30, 90].map(r => (
+                  <button key={r}
+                    className={`geo-range-btn ${range === r ? "active" : ""}`}
+                    onClick={() => setRange(r)}
+                    style={{ padding: "6px 14px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: range === r ? "var(--primary-10)" : "var(--bg-white)", color: range === r ? "var(--primary)" : "var(--text-muted)", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "var(--font)" }}>
+                    {r} Hari
+                  </button>
+                ))}
+              </div>
             </div>
-          )) : <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-muted)" }}>Memuat data peringatan...</div>}
-          <button style={{ width: "100%", justifyContent: "center", marginTop: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "1px solid var(--border)", background: "transparent", color: "var(--text)" }}>
-            Lihat Semua Laporan
-          </button>
-        </div>
-        <div className="geo-card" style={{ padding: "22px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga (Grafana)</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Panel embedded dari Grafana dashboard</div>
+            <div style={{ height: 280, position: "relative" }}>
+              {chartData ? (
+                <Chart type="line" data={chartData} options={chartOptions} />
+              ) : (
+                <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)", fontSize: 13 }}>
+                  Belum ada data tren.
+                </div>
+              )}
             </div>
           </div>
-          <GrafanaEmbed
-            panelId="panel-2"
-            komoditasIds={state.komoditas_ids}
-            provinsiIds={state.provinsi_ids}
-            range={state.range}
-            tab="analisis-tren-harga-komoditas"
-          />
-        </div>
-      </div>
 
-      <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Distribusi Harga Nasional</div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Visualisasi sebaran harga berdasarkan rata-rata provinsi</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="geo-card" style={{ padding: "22px 24px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </svg>
+                Kenaikan Terbesar
+              </div>
+              {data?.gainers?.length ? (
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Komoditas</th>
+                      <th style={{ textAlign: "right" }}>Harga Awal</th>
+                      <th style={{ textAlign: "right" }}>Harga Akhir</th>
+                      <th style={{ textAlign: "right" }}>Naik</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.gainers.map((item, i) => (
+                      <tr key={i}>
+                        <td className="mono" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
+                        <td style={{ fontWeight: 600 }}>{item.komoditas}</td>
+                        <td className="mono" style={{ textAlign: "right" }}>{fmt(item.harga_awal)}</td>
+                        <td className="mono" style={{ textAlign: "right" }}>{fmt(item.harga_akhir)}</td>
+                        <td className="mono" style={{ textAlign: "right", color: "#16a34a", fontWeight: 700 }}>+{item.pct}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>Belum ada data.</div>
+              )}
+            </div>
+
+            <div className="geo-card" style={{ padding: "22px 24px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5">
+                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+                  <polyline points="17 18 23 18 23 12" />
+                </svg>
+                Penurunan Terbesar
+              </div>
+              {data?.losers?.length ? (
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Komoditas</th>
+                      <th style={{ textAlign: "right" }}>Harga Awal</th>
+                      <th style={{ textAlign: "right" }}>Harga Akhir</th>
+                      <th style={{ textAlign: "right" }}>Turun</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.losers.map((item, i) => (
+                      <tr key={i}>
+                        <td className="mono" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
+                        <td style={{ fontWeight: 600 }}>{item.komoditas}</td>
+                        <td className="mono" style={{ textAlign: "right" }}>{fmt(item.harga_awal)}</td>
+                        <td className="mono" style={{ textAlign: "right" }}>{fmt(item.harga_akhir)}</td>
+                        <td className="mono" style={{ textAlign: "right", color: "#dc2626", fontWeight: 700 }}>{item.pct}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>Belum ada data.</div>
+              )}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>
-            <span>SKALA HARGA:</span>
-            <div style={{ width: 100, height: 8, borderRadius: 4, background: "linear-gradient(to right, #dcfce7, #fef08a, #fca5a5, #ef4444)" }} />
-          </div>
-        </div>
-        <div style={{ height: 380, borderRadius: "var(--radius-sm)", overflow: "hidden", position: "relative" }}>
-          <LeafletHeatmapMap geojsonData={mapDataReady} />
-        </div>
-      </div>
+        </>
+      )}
 
-
+      <style jsx global>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .dash-table { width: 100%; border-collapse: collapse; }
+        .dash-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); text-align: left; padding: 0 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        .dash-table td { padding: 8px 6px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--bg-muted); vertical-align: middle; }
+        .mono { font-family: var(--mono); font-weight: 600; font-size: 12px; }
+      `}</style>
     </GeoAgriLayout>
   );
 }

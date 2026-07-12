@@ -3,8 +3,6 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
-import Spinner from "@components/UI/Spinner";
-import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 import Select from "react-select";
 
 const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
@@ -36,7 +34,7 @@ export default function AnalisisHarga() {
   const [komoditasList, setKomoditasList] = useState([]);
   const [provinsiList, setProvinsiList] = useState([]);
   const [kabkotaOptions, setKabkotaOptions] = useState([]);
-  const [pasarOptions, setPasarOptions] = useState([]);
+  const [pasarList, setPasarList] = useState([]);
 
   const [selectedKomoditas, setSelectedKomoditas] = useState(null);
   const [selectedProvinsi, setSelectedProvinsi] = useState(null);
@@ -47,7 +45,7 @@ export default function AnalisisHarga() {
   const [tanggalSelesai, setTanggalSelesai] = useState("");
 
   const [trendData, setTrendData] = useState(null);
-  const [comparisonData, setComparisonData] = useState([]);
+  const [perProvData, setPerProvData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,46 +59,25 @@ export default function AnalisisHarga() {
   }, []);
 
   useEffect(() => {
-    const cacheKeyKom = "cache_master_komoditas";
-    const cacheKeyProv = "cache_master_provinsi";
-    const cachedKom = sessionStorage.getItem(cacheKeyKom);
-    const cachedProv = sessionStorage.getItem(cacheKeyProv);
-
-    if (cachedKom && cachedProv) {
-      setKomoditasList(JSON.parse(cachedKom));
-      setProvinsiList(JSON.parse(cachedProv));
-      return;
-    }
-
     Promise.all([
       api("/api/master/komoditas"),
       api("/api/master/provinsi"),
-    ]).then(([kom, prov]) => {
-      const kData = kom.data || [];
-      const pData = prov.data || [];
-      setKomoditasList(kData);
-      setProvinsiList(pData);
-      sessionStorage.setItem(cacheKeyKom, JSON.stringify(kData));
-      sessionStorage.setItem(cacheKeyProv, JSON.stringify(pData));
+      api("/api/master/pasar"),
+    ]).then(([kom, prov, ps]) => {
+      setKomoditasList(kom.data || []);
+      setProvinsiList(prov.data || []);
+      setPasarList(ps.data || []);
     });
   }, []);
 
   useEffect(() => {
     setSelectedKabkota(null);
     setSelectedPasar(null);
-    setPasarOptions([]);
     if (selectedProvinsi?.value) {
-      const cacheKey = `cache_kabkota_${selectedProvinsi.value}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        setKabkotaOptions(JSON.parse(cached));
-        return;
-      }
       api(`/api/master/kabkota?provinsi_id=${selectedProvinsi.value}`)
         .then(res => {
           const opts = (res.data ?? []).map(k => ({ value: String(k.id), label: k.nama }));
           setKabkotaOptions(opts);
-          sessionStorage.setItem(cacheKey, JSON.stringify(opts));
         })
         .catch(() => setKabkotaOptions([]));
     } else {
@@ -108,16 +85,11 @@ export default function AnalisisHarga() {
     }
   }, [selectedProvinsi]);
 
-  useEffect(() => {
-    setSelectedPasar(null);
-    if (selectedKabkota?.value) {
-      api(`/api/master/pasar?kabkota_id=${selectedKabkota.value}`)
-        .then(res => setPasarOptions((res.data ?? []).map(p => ({ value: String(p.id), label: p.nama }))))
-        .catch(() => setPasarOptions([]));
-    } else {
-      setPasarOptions([]);
-    }
-  }, [selectedKabkota]);
+  const pasarOptions = useMemo(() => {
+    return pasarList
+      .filter(p => !selectedKabkota?.value || String(p.kabupaten_id) === selectedKabkota.value)
+      .map(p => ({ value: String(p.id), label: p.nama }));
+  }, [pasarList, selectedKabkota]);
 
   const buildParams = useCallback(() => {
     const params = new URLSearchParams();
@@ -137,34 +109,19 @@ export default function AnalisisHarga() {
     try {
       const params = buildParams();
 
-      const [trendRes, heatmapRes] = await Promise.all([
+      const [trendRes, perProvRes] = await Promise.all([
         api(`/api/komoditas/tren?${params}`),
-        api(`/api/heatmap?komoditas=${selectedKomoditas.label}&summary=true`),
+        api(`/api/komoditas/per-provinsi?komoditas_id=${selectedKomoditas.value}`),
       ]);
 
       setTrendData(trendRes.data || []);
-
-      if (heatmapRes.features) {
-        let items = heatmapRes.features.map(f => ({
-          nama: f.properties.kabupaten || f.properties.nama,
-          harga: Number(f.properties.rata_kabupaten || f.properties.harga || 0),
-        })).filter(f => f.harga > 0);
-
-        if (selectedKabkota?.value) {
-          items = items.filter(f => f.nama === selectedKabkota.label);
-        } else if (selectedProvinsi?.value && kabkotaOptions.length) {
-          const kabNames = new Set(kabkotaOptions.map(o => o.label));
-          items = items.filter(f => kabNames.has(f.nama));
-        }
-
-        setComparisonData(items.sort((a, b) => b.harga - a.harga));
-      }
+      setPerProvData(perProvRes);
     } catch (e) {
       console.error(e);
       setError("Gagal memuat data");
     }
     setLoading(false);
-  }, [selectedKomoditas, buildParams, kabkotaOptions, selectedKabkota, selectedProvinsi]);
+  }, [selectedKomoditas, buildParams]);
 
   const resetFilters = () => {
     setSelectedKomoditas(null);
@@ -176,7 +133,7 @@ export default function AnalisisHarga() {
     setTanggalMulai(toDate(from));
     setTanggalSelesai(toDate(to));
     setTrendData(null);
-    setComparisonData([]);
+    setPerProvData(null);
     setError("");
   };
 
@@ -188,13 +145,14 @@ export default function AnalisisHarga() {
     const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
     const min = sorted[0];
     const max = sorted[sorted.length - 1];
-    const mid = Math.floor(sorted.length / 2);
-    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-    const first = prices[0];
-    const last = prices[prices.length - 1];
-    const change = first ? ((last - first) / first) * 100 : 0;
-    return { rata: avg, min, max, median, change, first, last, count: prices.length };
+    const selisih = max - min;
+    return { rata: avg, min, max, selisih, count: prices.length };
   }, [trendData]);
+
+  const ranking = useMemo(() => {
+    if (!perProvData?.data?.length) return [];
+    return [...perProvData.data].sort((a, b) => b.harga - a.harga);
+  }, [perProvData]);
 
   const chartData = useMemo(() => {
     if (!trendData?.length) return null;
@@ -220,18 +178,26 @@ export default function AnalisisHarga() {
   }, [trendData, selectedKomoditas]);
 
   const comparisonChartData = useMemo(() => {
-    if (!comparisonData.length) return null;
-    const top = comparisonData.slice(0, 15);
+    if (!ranking.length) return null;
+    const top = ranking.slice(0, 15);
+    const avg = ranking.reduce((s, r) => s + r.harga, 0) / ranking.length;
     return {
-      labels: top.map(d => d.nama),
-      datasets: [{
-        label: "Harga Rata-rata",
-        data: top.map(d => d.harga),
-        backgroundColor: top.map((_, i) => colors[i % colors.length]),
-        borderRadius: 4,
-      }]
+      labels: top.map(d => d.provinsi),
+      datasets: [
+        {
+          data: top.map(d => d.harga),
+          backgroundColor: top.map(d =>
+            d.harga > avg * 1.1 ? "#fca5a5" : d.harga < avg * 0.9 ? "#86efac" : "#a5b4fc"
+          ),
+          borderColor: top.map(d =>
+            d.harga > avg * 1.1 ? "#dc2626" : d.harga < avg * 0.9 ? "#16a34a" : "#2d3bde"
+          ),
+          borderWidth: 1.5,
+          borderRadius: 5,
+        },
+      ],
     };
-  }, [comparisonData]);
+  }, [ranking]);
 
   const barOptions = {
     ...chartDefaultOptions,
@@ -251,6 +217,18 @@ export default function AnalisisHarga() {
     option: (base) => ({ ...base, fontSize: 13 }),
   };
 
+  const pp = perProvData?.statistik;
+  const insight = ranking.length >= 2 && pp ? (() => {
+    const highest = ranking[0];
+    const lowest = ranking[ranking.length - 1];
+    const selisih = pp.max - pp.min;
+    return (
+      <>
+        Harga tertinggi di <strong>{highest.provinsi}</strong> ({fmt(highest.harga)}), terendah di <strong>{lowest.provinsi}</strong> ({fmt(lowest.harga)}). Selisih harga <strong>{fmt(selisih)}</strong>.
+      </>
+    );
+  })() : null;
+
   return (
     <GeoAgriLayout title="Analisis Harga">
       <Head><title>Analisis Harga — GeoAgri</title></Head>
@@ -269,91 +247,39 @@ export default function AnalisisHarga() {
         </span>
 
         <div style={{ minWidth: 180, flex: "1 1 160px" }}>
-          <Select
-            options={komoditasOpts}
-            value={selectedKomoditas}
-            onChange={setSelectedKomoditas}
-            placeholder="Cari Komoditas..."
-            isClearable
-            className="react-select"
-            classNamePrefix="rs"
-            styles={selectStyles}
-          />
+          <Select options={komoditasOpts} value={selectedKomoditas} onChange={setSelectedKomoditas}
+            placeholder="Cari Komoditas..." isClearable
+            className="react-select" classNamePrefix="rs" styles={selectStyles} />
         </div>
-
         <div style={{ minWidth: 160, flex: "1 1 140px" }}>
-          <Select
-            options={provinsiOpts}
-            value={selectedProvinsi}
-            onChange={setSelectedProvinsi}
-            placeholder="Pilih Provinsi..."
-            isClearable
-            className="react-select"
-            classNamePrefix="rs"
-            styles={selectStyles}
-          />
+          <Select options={provinsiOpts} value={selectedProvinsi} onChange={setSelectedProvinsi}
+            placeholder="Pilih Provinsi..." isClearable
+            className="react-select" classNamePrefix="rs" styles={selectStyles} />
         </div>
-
         <div style={{ minWidth: 160, flex: "1 1 140px" }}>
-          <Select
-            options={kabkotaOptions}
-            value={selectedKabkota}
-            onChange={setSelectedKabkota}
-            placeholder="Pilih Kab/Kota..."
-            isDisabled={!kabkotaOptions.length}
-            isClearable
-            className="react-select"
-            classNamePrefix="rs"
-            styles={selectStyles}
-          />
+          <Select options={kabkotaOptions} value={selectedKabkota} onChange={setSelectedKabkota}
+            placeholder="Pilih Kab/Kota..." isDisabled={!kabkotaOptions.length} isClearable
+            className="react-select" classNamePrefix="rs" styles={selectStyles} />
         </div>
-
         <div style={{ minWidth: 160, flex: "1 1 140px" }}>
-          <Select
-            options={pasarOptions}
-            value={selectedPasar}
-            onChange={setSelectedPasar}
-            placeholder="Pilih Pasar..."
-            isDisabled={!pasarOptions.length}
-            isClearable
-            className="react-select"
-            classNamePrefix="rs"
-            styles={selectStyles}
-          />
+          <Select options={pasarOptions} value={selectedPasar} onChange={setSelectedPasar}
+            placeholder="Pilih Pasar..." isDisabled={!pasarOptions.length} isClearable
+            className="react-select" classNamePrefix="rs" styles={selectStyles} />
         </div>
 
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input
-            type="date"
-            value={tanggalMulai}
-            onChange={e => setTanggalMulai(e.target.value)}
-            className="filter-date-input"
-            style={{ fontSize: 12, width: 140 }}
-          />
+          <input type="date" value={tanggalMulai} onChange={e => setTanggalMulai(e.target.value)}
+            className="filter-date-input" style={{ fontSize: 12, width: 140 }} />
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>s.d.</span>
-          <input
-            type="date"
-            value={tanggalSelesai}
-            onChange={e => setTanggalSelesai(e.target.value)}
-            className="filter-date-input"
-            style={{ fontSize: 12, width: 140 }}
-          />
+          <input type="date" value={tanggalSelesai} onChange={e => setTanggalSelesai(e.target.value)}
+            className="filter-date-input" style={{ fontSize: 12, width: 140 }} />
         </div>
 
-        <button
-          onClick={applyAnalysis}
-          disabled={!selectedKomoditas}
-          className="geo-btn-primary"
-          style={{ whiteSpace: "nowrap" }}
-        >
+        <button onClick={applyAnalysis} disabled={!selectedKomoditas}
+          className="geo-btn-primary" style={{ whiteSpace: "nowrap" }}>
           {loading ? "Memuat..." : "Terapkan Analisis"}
         </button>
-
-        <button
-          onClick={resetFilters}
-          className="filter-btn"
-          style={{ whiteSpace: "nowrap" }}
-        >
+        <button onClick={resetFilters} className="filter-btn" style={{ whiteSpace: "nowrap" }}>
           Reset
         </button>
       </div>
@@ -364,34 +290,32 @@ export default function AnalisisHarga() {
         </div>
       )}
 
+      {insight && (
+        <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: "var(--radius-sm)", background: "linear-gradient(135deg, #eff6ff, #f0fdf4)", border: "1px solid #bfdbfe", fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{insight}</span>
+          </div>
+        </div>
+      )}
+
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
           <StatCard label="Rata-rata Harga" value={fmt(stats.rata)} sub="Seluruh periode" />
-          <StatCard label="Harga Minimum" value={fmt(stats.min)} color="#16a34a" sub={stats.count + " data"} />
-          <StatCard label="Harga Maksimum" value={fmt(stats.max)} color="#dc2626" sub={stats.count + " data"} />
-          <StatCard label="Median" value={fmt(stats.median)} sub="Nilai tengah" />
-          <StatCard
-            label={stats.change >= 0 ? "Kenaikan" : "Penurunan"}
-            value={(stats.change >= 0 ? "+" : "") + stats.change.toFixed(2) + "%"}
-            color={stats.change >= 0 ? "#dc2626" : "#16a34a"}
-            sub={
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  {stats.change >= 0
-                    ? <polyline points="18 15 12 9 6 15" />
-                    : <polyline points="6 9 12 15 18 9" />
-                  }
-                </svg>
-                {stats.change >= 0 ? "Naik" : "Turun"}
-              </span>
-            }
-          />
+          <StatCard label="Harga Tertinggi" value={fmt(stats.max)} color="#dc2626" sub={stats.count + " data"} />
+          <StatCard label="Harga Terendah" value={fmt(stats.min)} color="#16a34a" sub={stats.count + " data"} />
+          <StatCard label="Selisih Harga" value={fmt(stats.selisih)} color="#7c3aed" sub="max − min" />
+          <StatCard label="Jumlah Data" value={stats.count} color="#ea580c" sub="total record" />
         </div>
       )}
 
       {loading && (
         <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
-          <Spinner size={32} />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+            <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+          </svg>
         </div>
       )}
 
@@ -421,73 +345,49 @@ export default function AnalisisHarga() {
       )}
 
       {!loading && comparisonChartData && (
-        <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
-              Perbandingan Harga {selectedKabkota ? "Pasar" : "Kabupaten/Kota"}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-              {selectedProvinsi ? selectedProvinsi.label : "Semua Provinsi"}
-              {selectedKabkota && <span> · {selectedKabkota.label}</span>}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div style={{ height: Math.max(200, comparisonData.length * 28), position: "relative" }}>
-              <Chart type="bar" data={comparisonChartData} options={barOptions} />
-            </div>
-            <div>
-              <div style={{ maxHeight: 400, overflowY: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left", padding: "6px 10px", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", borderBottom: "1px solid var(--border)" }}>#</th>
-                      <th style={{ textAlign: "left", padding: "6px 10px", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", borderBottom: "1px solid var(--border)" }}>
-                        {selectedKabkota ? "Pasar" : "Kabupaten/Kota"}
-                      </th>
-                      <th style={{ textAlign: "right", padding: "6px 10px", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", borderBottom: "1px solid var(--border)" }}>Harga</th>
-                      {comparisonData.length > 1 && stats && (
-                        <th style={{ textAlign: "right", padding: "6px 10px", color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".8px", borderBottom: "1px solid var(--border)" }}>Deviasi</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparisonData.map((d, i) => {
-                      const dev = stats ? ((d.harga - stats.rata) / stats.rata * 100) : 0;
-                      return (
-                        <tr key={d.nama} style={{ borderBottom: "1px solid var(--bg-muted)" }}>
-                          <td style={{ padding: "6px 10px", fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--mono)" }}>{i + 1}</td>
-                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "var(--text)" }}>{d.nama}</td>
-                          <td style={{ padding: "6px 10px", textAlign: "right", fontFamily: "var(--mono)", fontWeight: 700 }}>{fmt(d.harga)}</td>
-                          {comparisonData.length > 1 && stats && (
-                            <td style={{
-                              padding: "6px 10px", textAlign: "right", fontFamily: "var(--mono)", fontWeight: 600,
-                              color: dev > 5 ? "#dc2626" : dev < -5 ? "#16a34a" : "var(--text-muted)"
-                            }}>
-                              {dev > 0 ? "+" : ""}{dev.toFixed(1)}%
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          <div className="geo-card" style={{ padding: "22px 24px" }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                Perbandingan Harga per Provinsi
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                {selectedProvinsi ? selectedProvinsi.label : "Semua Provinsi"}
+                {selectedKabkota && <span> · {selectedKabkota.label}</span>}
               </div>
             </div>
+            <div style={{ height: Math.max(200, ranking.length * 28), position: "relative" }}>
+              <Chart type="bar" data={comparisonChartData} options={barOptions} />
+            </div>
           </div>
-        </div>
-      )}
 
-      {!loading && chartData && (
-        <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Tren Harga (Grafana)</div>
-          <GrafanaEmbed
-            panelId="panel-2"
-            komoditasIds={selectedKomoditas ? [selectedKomoditas.value] : []}
-            provinsiIds={selectedProvinsi ? [selectedProvinsi.value] : []}
-            range={30}
-            tab="analisis-tren-harga-komoditas"
-          />
+          <div className="geo-card" style={{ padding: "18px 20px" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Ranking Provinsi</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--text-muted)" }}>#</span>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--text-muted)", flex: 1, marginLeft: 8 }}>Provinsi</span>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: "var(--text-muted)", textAlign: "right" }}>Harga</span>
+            </div>
+            <div style={{ maxHeight: 360, overflowY: "auto" }}>
+              {ranking.slice(0, 10).map((row, i) => {
+                const avg = stats?.rata || 1;
+                const dev = ((row.harga - avg) / avg) * 100;
+                return (
+                  <div key={row.provinsi_id || i}
+                    style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--bg-muted)" }}>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 12, fontWeight: 700, color: i < 3 ? "var(--primary)" : "var(--text-muted)", width: 24, textAlign: "center" }}>{i + 1}</span>
+                    <span style={{ flex: 1, marginLeft: 8, fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{row.provinsi}</span>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{fmt(row.harga)}</div>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600, color: dev > 5 ? "#dc2626" : dev < -5 ? "#16a34a" : "var(--text-muted)" }}>
+                        {dev > 0 ? "+" : ""}{dev.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -500,6 +400,9 @@ export default function AnalisisHarga() {
         </div>
       )}
 
+      <style jsx global>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </GeoAgriLayout>
   );
 }

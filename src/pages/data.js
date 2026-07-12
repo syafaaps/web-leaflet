@@ -53,6 +53,8 @@ export default function DataPage() {
   const [kabkotaOptions, setKabkotaOptions] = useState([]);
   const [filterFrom, setFilterFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
   const [filterTo, setFilterTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [filterPasar, setFilterPasar] = useState("");
+  const [pasarList, setPasarList] = useState([]);
   const [lastSync, setLastSync] = useState(null);
   const perPage = 25;
 
@@ -63,29 +65,33 @@ export default function DataPage() {
       if (filterKom) url += `&komoditas_id=${filterKom}`;
       if (filterProv) url += `&provinsi_id=${filterProv}`;
       if (filterKabKota) url += `&kabkota_id=${filterKabKota}`;
+      if (filterPasar) url += `&pasar_id=${filterPasar}`;
       const res = await api(url);
       setData(res.data || []);
     } catch (e) { console.error(e); }
     setLoading(false);
-  }, [filterFrom, filterTo, filterKom, filterProv, filterKabKota]);
+  }, [filterFrom, filterTo, filterKom, filterProv, filterKabKota, filterPasar]);
 
   useEffect(() => {
-    const [kRes, pRes] = Promise.all([
+    Promise.all([
       api("/api/master/komoditas"),
       api("/api/master/provinsi"),
-    ]).then(([k, p]) => {
+      api("/api/master/pasar"),
+    ]).then(([k, p, ps]) => {
       setKomoditas(k.data || []);
       setProvinsiList(p.data || []);
+      setPasarList(ps.data || []);
     });
     fetchData();
     setLastSync(new Date().toLocaleString("id-ID"));
   }, []);
 
   useEffect(() => {
-    if (!filterProv) { setKabkotaOptions([]); setFilterKabKota(""); return; }
+    if (!filterProv) { setKabkotaOptions([]); setFilterKabKota(""); setFilterPasar(""); return; }
     api(`/api/master/kabkota?provinsi_id=${filterProv}`).then(res => {
       setKabkotaOptions(res.data || []);
       setFilterKabKota("");
+      setFilterPasar("");
     });
   }, [filterProv]);
 
@@ -212,6 +218,23 @@ export default function DataPage() {
               className="react-select"
               classNamePrefix="rs"
               styles={{ control: (base) => ({ ...base, minHeight: 36, fontSize: 13, minWidth: 180 }), menu: (base) => ({ ...base, zIndex: 999 }) }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>Pasar</div>
+            <Select
+              name="pasar"
+              options={pasarList
+                .filter(p => !filterKabKota || String(p.kabupaten_id) === filterKabKota)
+                .map(p => ({ value: String(p.id), label: p.nama }))}
+              value={filterPasar ? { value: filterPasar, label: pasarList.find(p => String(p.id) === filterPasar)?.nama } : null}
+              onChange={val => { setFilterPasar(val ? val.value : ""); setPage(1); }}
+              placeholder="Semua"
+              isClearable
+              isDisabled={!filterKabKota}
+              className="react-select"
+              classNamePrefix="rs"
+              styles={{ control: (base) => ({ ...base, minHeight: 36, fontSize: 13, minWidth: 200 }), menu: (base) => ({ ...base, zIndex: 999 }) }}
             />
           </div>
           <div>
