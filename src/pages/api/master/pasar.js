@@ -1,17 +1,11 @@
-import pool from '../../../lib/db';
-
 export default async function handler(req, res) {
   try {
     const { kabkota_id } = req.query;
-    let query = `SELECT id, psr_nama AS nama FROM pasar`;
-    const params = [];
-    if (kabkota_id) {
-      params.push(kabkota_id);
-      query += ` WHERE kabkota_id = $1`;
-    }
-    query += ` ORDER BY psr_nama`;
-    const result = await pool.query(query, params);
-    res.status(200).json({ status: "success", data: result.rows });
+    let url = `http://192.168.60.110:98/api/master/pasar`;
+    if (kabkota_id) url += `?kabkota_id=${kabkota_id}`;
+    const response = await fetch(url);
+    const json = await response.json();
+    res.status(200).json(json);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });

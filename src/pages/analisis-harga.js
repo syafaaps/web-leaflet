@@ -34,7 +34,7 @@ export default function AnalisisHarga() {
   const [komoditasList, setKomoditasList] = useState([]);
   const [provinsiList, setProvinsiList] = useState([]);
   const [kabkotaOptions, setKabkotaOptions] = useState([]);
-  const [pasarOptions, setPasarOptions] = useState([]);
+  const [pasarList, setPasarList] = useState([]);
 
   const [selectedKomoditas, setSelectedKomoditas] = useState(null);
   const [selectedProvinsi, setSelectedProvinsi] = useState(null);
@@ -62,16 +62,17 @@ export default function AnalisisHarga() {
     Promise.all([
       api("/api/master/komoditas"),
       api("/api/master/provinsi"),
-    ]).then(([kom, prov]) => {
+      api("/api/master/pasar"),
+    ]).then(([kom, prov, ps]) => {
       setKomoditasList(kom.data || []);
       setProvinsiList(prov.data || []);
+      setPasarList(ps.data || []);
     });
   }, []);
 
   useEffect(() => {
     setSelectedKabkota(null);
     setSelectedPasar(null);
-    setPasarOptions([]);
     if (selectedProvinsi?.value) {
       api(`/api/master/kabkota?provinsi_id=${selectedProvinsi.value}`)
         .then(res => {
@@ -84,16 +85,11 @@ export default function AnalisisHarga() {
     }
   }, [selectedProvinsi]);
 
-  useEffect(() => {
-    setSelectedPasar(null);
-    if (selectedKabkota?.value) {
-      api(`/api/master/pasar?kabkota_id=${selectedKabkota.value}`)
-        .then(res => setPasarOptions((res.data ?? []).map(p => ({ value: String(p.id), label: p.nama }))))
-        .catch(() => setPasarOptions([]));
-    } else {
-      setPasarOptions([]);
-    }
-  }, [selectedKabkota]);
+  const pasarOptions = useMemo(() => {
+    return pasarList
+      .filter(p => !selectedKabkota?.value || String(p.kabupaten_id) === selectedKabkota.value)
+      .map(p => ({ value: String(p.id), label: p.nama }));
+  }, [pasarList, selectedKabkota]);
 
   const buildParams = useCallback(() => {
     const params = new URLSearchParams();
