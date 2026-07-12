@@ -1,84 +1,44 @@
-﻿import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState } from "react";
 import Head from "next/head";
-// import dynamic from "next/dynamic";
 import GeoAgriLayout from "@components/GeoAgriLayout";
 import StatCard from "@components/UI/StatCard";
 import GrafanaEmbed from "@components/UI/GrafanaEmbed";
 
-// const Chart = dynamic(() => import("react-chartjs-2").then(m => m.Chart), { ssr: false });
-
 const api = (url) => fetch(url).then(r => r.json());
 const fmt = (n) => n != null ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
 
+const toDate = (d) => d.toISOString().slice(0, 10);
+
 export default function DashboardPage() {
   const [data, setData] = useState(null);
-  const [range, setRange] = useState(30);
   const [loading, setLoading] = useState(true);
 
+  const [komoditasList, setKomoditasList] = useState([]);
+  const [selectedKomoditas, setSelectedKomoditas] = useState(null);
+  const [tanggalMulai, setTanggalMulai] = useState("");
+  const [tanggalSelesai, setTanggalSelesai] = useState("");
+  const [range, setRange] = useState(30);
+
   useEffect(() => {
-    api("/api/dashboard").then(res => {
-      if (res.status === "success") setData(res.data);
-      setLoading(false);
-    });
+    const to = new Date();
+    const from = new Date(Date.now() - 30 * 86400000);
+    setTanggalMulai(toDate(from));
+    setTanggalSelesai(toDate(to));
   }, []);
 
-  // const chartData = useMemo(() => {
-  //   if (!data?.trend?.length) return null;
-  //   const labels = data.trend.map(d => {
-  //     const dt = new Date(d.tanggal + "T00:00:00");
-  //     return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-  //   });
-  //   const prices = data.trend.map(d => d.harga);
-  //   return {
-  //     labels,
-  //     datasets: [{
-  //       label: "Rata-rata Nasional",
-  //       data: prices,
-  //       borderColor: "#155233",
-  //       backgroundColor: (ctx) => {
-  //         if (!ctx.chart?.ctx) return "rgba(21,82,51,0.08)";
-  //         const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
-  //         g.addColorStop(0, "rgba(21,82,51,0.15)");
-  //         g.addColorStop(1, "rgba(21,82,51,0)");
-  //         return g;
-  //       },
-  //       fill: true,
-  //       borderWidth: 2.5,
-  //       pointRadius: 0,
-  //       pointHoverRadius: 5,
-  //       tension: 0.4,
-  //     }]
-  //   };
-  // }, [data]);
+  useEffect(() => {
+    Promise.all([
+      api("/api/master/komoditas"),
+      api("/api/dashboard"),
+    ]).then(([kom, dash]) => {
+      setKomoditasList(kom.data || []);
+      if (dash.status === "success") setData(dash.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  // const chartOptions = {
-  //   responsive: true,
-  //   maintainAspectRatio: false,
-  //   interaction: { mode: "index", intersect: false },
-  //   plugins: {
-  //     legend: { display: false },
-  //     tooltip: {
-  //       backgroundColor: "#fff",
-  //       titleColor: "#111827",
-  //       bodyColor: "#6b7280",
-  //       borderColor: "#e5e7eb",
-  //       borderWidth: 1,
-  //       padding: 10,
-  //       callbacks: { label: (ctx) => fmt(ctx.parsed.y) }
-  //     }
-  //   },
-  //   scales: {
-  //     x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#9ca3af", maxTicksLimit: 12 } },
-  //     y: { grid: { color: "rgba(0,0,0,.04)" }, border: { dash: [4, 4] }, ticks: { font: { size: 11 }, color: "#9ca3af", callback: v => fmt(v) } }
-  //   }
-  // };
-
+  const komoditasOpts = komoditasList.map(k => ({ value: String(k.id), label: k.nama }));
   const ls = data?.last_scrape;
-  const scrapeInfo = ls ? (
-    <span>
-      {ls.workflow} · {new Date(ls.finished_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-    </span>
-  ) : "—";
 
   return (
     <GeoAgriLayout title="Dashboard">
@@ -106,36 +66,44 @@ export default function DashboardPage() {
             <StatCard label="Update Scraping" value={ls?.finished_at ? new Date(ls.finished_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"} color="#0891b2" sub={ls ? `${ls.total_data} data · ${ls.total_pasar} pasar` : ""} />
           </div>
 
-          {/* ── CHART.JS: TREN HARGA NASIONAL (DINONAKTIFKAN) ── */}
-          {/* <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Tren Harga Nasional</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                  Rata-rata harga seluruh komoditas · {range} hari terakhir
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 4 }}>
-                {[7, 30, 90].map(r => (
-                  <button key={r}
-                    className={`geo-range-btn ${range === r ? "active" : ""}`}
-                    onClick={() => setRange(r)}
-                    style={{ padding: "6px 14px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: range === r ? "var(--primary-10)" : "var(--bg-white)", color: range === r ? "var(--primary)" : "var(--text-muted)", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "var(--font)" }}>
-                    {r} Hari
-                  </button>
-                ))}
-              </div>
+          {/* ── FILTER BAR ── */}
+          <div className="geo-card" style={{ padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              Filter Grafana:
+            </span>
+
+            <select
+              value={selectedKomoditas || ""}
+              onChange={e => setSelectedKomoditas(e.target.value || null)}
+              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 12, background: "var(--bg)", color: "var(--text)", cursor: "pointer", minWidth: 160 }}
+            >
+              <option value="">Semua Komoditas</option>
+              {komoditasOpts.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <input type="date" value={tanggalMulai} onChange={e => { setTanggalMulai(e.target.value); setRange(0); }}
+                style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 12, background: "var(--bg)", color: "var(--text)" }} />
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>s.d.</span>
+              <input type="date" value={tanggalSelesai} onChange={e => { setTanggalSelesai(e.target.value); setRange(0); }}
+                style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", fontSize: 12, background: "var(--bg)", color: "var(--text)" }} />
             </div>
-            <div style={{ height: 280, position: "relative" }}>
-              {chartData ? (
-                <Chart type="line" data={chartData} options={chartOptions} />
-              ) : (
-                <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)", fontSize: 13 }}>
-                  Belum ada data tren.
-                </div>
-              )}
+
+            <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+              {[7, 30, 90].map(r => (
+                <button key={r}
+                  onClick={() => { setRange(r); setTanggalMulai(""); setTanggalSelesai(""); }}
+                  style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border)", background: range === r && !tanggalMulai ? "var(--primary, #155233)" : "var(--bg)", color: range === r && !tanggalMulai ? "#fff" : "var(--text-muted)", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                  {r} Hari
+                </button>
+              ))}
             </div>
-          </div> */}
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
             <div className="geo-card" style={{ padding: "22px 24px" }}>
@@ -217,6 +185,9 @@ export default function DashboardPage() {
             </div>
             <GrafanaEmbed
               panelId="panel-2"
+              komoditasIds={selectedKomoditas ? [selectedKomoditas] : []}
+              from={tanggalMulai}
+              to={tanggalSelesai}
               range={range}
               tab="analisis-tren-harga-komoditas"
             />
