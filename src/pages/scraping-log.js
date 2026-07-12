@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useRef, useCallback } from "react";
 import Head from "next/head";
 import GeoAgriLayout from "@components/GeoAgriLayout";
+import AdminGuard from "@components/AdminGuard";
 import StatCard from "@components/UI/StatCard";
 import FilterBar from "@components/UI/FilterBar";
 import Panel from "@components/UI/Panel";
@@ -40,6 +41,7 @@ export default function ScrapingLog() {
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   return (
+    <AdminGuard>
     <GeoAgriLayout title="Scraping Log">
       <Head><title>Scraping Log — GeoAgri</title></Head>
 
@@ -189,5 +191,6 @@ export default function ScrapingLog() {
         .modal { background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; max-width: 520px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,.15); max-height: 80vh; overflow-y: auto; }
       `}</style>
     </GeoAgriLayout>
+    </AdminGuard>
   );
 }
