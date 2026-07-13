@@ -258,7 +258,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
+          {/* <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>
               Tren Harga (Grafana)
             </div>
@@ -270,7 +270,7 @@ export default function DashboardPage() {
               range={range}
               tab="analisis-tren-harga-komoditas"
             />
-          </div>
+          </div> */}
         </>
       )}
 

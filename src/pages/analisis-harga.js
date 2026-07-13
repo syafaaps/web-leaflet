@@ -392,7 +392,7 @@ export default function AnalisisHarga() {
         </div>
       )}
 
-      {!loading && trendData && (
+      {/* {!loading && trendData && (
         <div className="geo-card" style={{ padding: "22px 24px", marginBottom: 20 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>
             Tren Harga (Grafana)
@@ -408,7 +408,7 @@ export default function AnalisisHarga() {
             tab="analisis-tren-harga-komoditas"
           />
         </div>
-      )}
+      )} */}
 
       {!loading && !selectedKomoditas && (
         <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>
